@@ -2,8 +2,10 @@ using UnityEngine;
 
 // Oyunun ana döngüsü:
 // 1) Yolda yeşil bir işaret çıkar: yolcu orada bekliyor.
-// 2) İşaretin içinde durursan yolcu biner, turuncu bir varış işareti çıkar.
+// 2) İşaretin içinde durursan yolcu biner, turuncu bir varış işareti çıkar ve süre başlar.
 // 3) Varış işaretinde durursan yolcu iner ve ücreti kasana eklenir.
+//    Zamanında gelirsen bahşiş alırsın, geç kalırsan ücret kesilir.
+//    Yolcu taşırken yaptığın çarpışmalar yolcu memnuniyetini, o da bahşişi düşürür.
 public class PassengerManager : MonoBehaviour
 {
     [Header("Bağlantılar (Inspector'dan sürükle)")]
@@ -16,6 +18,13 @@ public class PassengerManager : MonoBehaviour
     public float baseFare = 15f;           // Açılış ücreti (TL)
     public float farePerMeter = 0.2f;      // Metre başına ücret (TL)
 
+    [Header("Süre ve Bahşiş")]
+    public float expectedSpeed = 8f;       // Süre hesabı için beklenen ortalama hız (m/s)
+    public float extraTime = 10f;          // Süreye eklenen ek pay (saniye)
+    public float tipPercent = 0.3f;        // Tam memnuniyette bahşiş: ücretin %30'u
+    public float latePenalty = 0.3f;       // Geç kalınca ücretten kesilen oran: %30
+    public float crashPenalty = 15f;       // Her çarpışmada memnuniyet kaybı (puan)
+
     // Oyuncu şu an ne yapıyor? Bu tür "durum" listelerine enum denir.
     enum State { GoingToPickup, CarryingPassenger }
     State state;
@@ -23,6 +32,8 @@ public class PassengerManager : MonoBehaviour
     GameObject marker;          // Ekrandaki işaret (zemin halkası + ışık sütunu)
     Vector3 targetPos;          // Şu anki hedefin konumu
     float currentFare;          // Taşınan yolcunun ödeyeceği ücret
+    float timeLeft;             // Kalan süre (saniye). Eksiye düşerse geç kalmışsın.
+    float satisfaction;         // Yolcu memnuniyeti (0-100)
     float totalMoney;           // Kasadaki toplam para
     int completedRides;         // Tamamlanan yolculuk sayısı
     string message = "";        // Ekranda kısa süre görünen mesaj
@@ -37,13 +48,20 @@ public class PassengerManager : MonoBehaviour
 
     void Start()
     {
+        taxi.OnCrash += HandleCrash;   // Taksinin çarpışma duyurusuna abone ol
         NewPickup();
+    }
+
+    void OnDestroy()
+    {
+        if (taxi != null) taxi.OnCrash -= HandleCrash;  // Aboneliği bırak (iyi alışkanlık)
     }
 
     void Update()
     {
         if (taxi == null) return;
         if (messageTimer > 0f) messageTimer -= Time.deltaTime;
+        if (state == State.CarryingPassenger) timeLeft -= Time.deltaTime;
 
         // İşaretin içinde ve neredeyse durmuş muyuz?
         if (DistanceToTarget() < stopRadius && taxi.SpeedKmh < maxStopSpeedKmh)
@@ -71,16 +89,42 @@ public class PassengerManager : MonoBehaviour
         float distance = Vector3.Distance(pickupPos, targetPos);
         currentFare = baseFare + distance * farePerMeter;
 
+        // Süre: mesafeyi beklenen hızla gitmek için gereken zaman + ek pay
+        timeLeft = distance / expectedSpeed + extraTime;
+        satisfaction = 100f;
+
         PlaceMarker(targetPos, new Color(1f, 0.55f, 0f)); // Turuncu
-        ShowMessage("Yolcu bindi! Turuncu işarete götür.");
+        ShowMessage("Yolcu bindi! " + timeLeft.ToString("0") + " saniyen var.");
     }
 
     void DropOff()
     {
-        totalMoney += currentFare;
+        float payment;
+        float tip = 0f;
+
+        if (timeLeft >= 0f)
+        {
+            payment = currentFare;
+            tip = currentFare * tipPercent * (satisfaction / 100f);
+            ShowMessage("Zamanında! " + payment.ToString("0") + " TL + " + tip.ToString("0") + " TL bahşiş");
+        }
+        else
+        {
+            payment = currentFare * (1f - latePenalty);
+            ShowMessage("Geç kaldın! Sadece " + payment.ToString("0") + " TL ödendi");
+        }
+
+        totalMoney += payment + tip;
         completedRides++;
-        ShowMessage("Yolcu indi: +" + currentFare.ToString("0") + " TL");
         NewPickup();
+    }
+
+    // Taksi bir şeye çarptığında TaxiController tarafından çağrılır
+    void HandleCrash(float impact)
+    {
+        if (state != State.CarryingPassenger) return;   // Boşken çarpmanın cezası yok
+        satisfaction = Mathf.Max(0f, satisfaction - crashPenalty);
+        ShowMessage("Çarpışma! Memnuniyet -" + crashPenalty.ToString("0"));
     }
 
     // Taksi ile hedef arasındaki yatay mesafe (yüksekliği yok sayar)
@@ -166,12 +210,26 @@ public class PassengerManager : MonoBehaviour
             ? "Görev: Yeşil işaretteki yolcuyu al"
             : "Görev: Yolcuyu turuncu işarete götür";
 
-        GUI.Box(new Rect(10, 170, 460, 150), "");
+        GUI.Box(new Rect(10, 170, 460, 220), "");
         GUI.Label(new Rect(20, 175, 440, 30), task, style);
         GUI.Label(new Rect(20, 210, 440, 30), "Hedefe uzaklık: " + DistanceToTarget().ToString("0") + " m", style);
+
         if (state == State.CarryingPassenger)
+        {
             GUI.Label(new Rect(20, 245, 440, 30), "Yolculuk ücreti: " + currentFare.ToString("0") + " TL", style);
-        GUI.Label(new Rect(20, 280, 440, 30), "Kasa: " + totalMoney.ToString("0") + " TL  (" + completedRides + " yolculuk)", style);
+
+            // Süre: 10 saniyenin altında kırmızı
+            GUIStyle timeStyle = new GUIStyle(style);
+            if (timeLeft < 10f) timeStyle.normal.textColor = Color.red;
+            string timeText = timeLeft >= 0f
+                ? "Kalan süre: " + timeLeft.ToString("0") + " sn"
+                : "GECİKTİN! (" + (-timeLeft).ToString("0") + " sn)";
+            GUI.Label(new Rect(20, 280, 440, 30), timeText, timeStyle);
+
+            GUI.Label(new Rect(20, 315, 440, 30), "Memnuniyet: %" + satisfaction.ToString("0"), style);
+        }
+
+        GUI.Label(new Rect(20, 350, 440, 30), "Kasa: " + totalMoney.ToString("0") + " TL  (" + completedRides + " yolculuk)", style);
 
         if (messageTimer > 0f)
         {

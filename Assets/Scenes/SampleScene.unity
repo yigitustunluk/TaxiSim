@@ -359,6 +359,11 @@ MonoBehaviour:
   maxStopSpeedKmh: 5
   baseFare: 15
   farePerMeter: 0.2
+  expectedSpeed: 12
+  extraTime: 5
+  tipPercent: 0.3
+  latePenalty: 0.3
+  crashPenalty: 15
 --- !u!4 &390591185
 Transform:
   m_ObjectHideFlags: 0
@@ -556,7 +561,8 @@ MonoBehaviour:
   brakeForce: 20
   turnSpeed: 80
   gripStrength: 10
-  groundCheckDistance: 0.7
+  groundCheckDistance: 1
+  crashMinImpact: 4
 --- !u!54 &538237879
 Rigidbody:
   m_ObjectHideFlags: 0

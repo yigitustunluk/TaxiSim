@@ -29,6 +29,26 @@ public class TaxiController : MonoBehaviour
     // Hızı km/s olarak verir. İleride taksimetre ve arayüzde kullanacağız.
     public float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
 
+    // ÇARPIŞMA OLAYI (event): Taksi sert bir şeye çarpınca bunu "duyurur".
+    // Başka script'ler (PassengerManager gibi) bu duyuruya abone olup tepki verir.
+    // Böylece taksi, kimin dinlediğini bilmek zorunda kalmaz.
+    public System.Action<float> OnCrash;
+    public float crashMinImpact = 4f;   // Bundan yavaş çarpmalar sayılmaz (m/s)
+    float lastCrashTime = -10f;
+
+    void OnCollisionEnter(Collision collision)
+    {
+        if (Time.time - lastCrashTime < 1f) return;           // Aynı çarpışmayı iki kez sayma
+        if (collision.contactCount == 0) return;
+        if (collision.GetContact(0).normal.y > 0.5f) return;  // Zemine değmek çarpışma değildir
+
+        float impact = collision.relativeVelocity.magnitude;
+        if (impact < crashMinImpact) return;
+
+        lastCrashTime = Time.time;
+        OnCrash?.Invoke(impact);   // "?." = dinleyen yoksa hata verme
+    }
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
