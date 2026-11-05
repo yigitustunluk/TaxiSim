@@ -57,6 +57,10 @@ public class TaxiController : MonoBehaviour
     // FixedUpdate: fizik adımlarında çalışır. Kuvvetleri burada uygularız.
     void FixedUpdate()
     {
+        // Çarpışmaların aracı kendi etrafında döndürmesini engeller.
+        // Dönüşü zaten direksiyon kodu (MoveRotation) yapıyor, fiziğin ayrıca döndürmesine gerek yok.
+        rb.angularVelocity = Vector3.zero;
+
         // Araç yerde mi? Havadayken gaz ve direksiyon çalışmaz.
         isGrounded = Physics.Raycast(transform.position, Vector3.down,
                                      groundCheckDistance, ~0, QueryTriggerInteraction.Ignore);
