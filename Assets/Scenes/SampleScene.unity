@@ -333,6 +333,7 @@ GameObject:
   m_Component:
   - component: {fileID: 390591185}
   - component: {fileID: 390591184}
+  - component: {fileID: 390591186}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -367,12 +368,28 @@ Transform:
   m_GameObject: {fileID: 390591183}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 19.49689, y: 169.33614, z: 204.36996}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &390591186
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 390591183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27a08940e4d1fbd4f80e60023389bb6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NavigationArrow
+  taxi: {fileID: 538237883}
+  passengers: {fileID: 390591184}
+  height: 2.6
+  turnSmooth: 8
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0

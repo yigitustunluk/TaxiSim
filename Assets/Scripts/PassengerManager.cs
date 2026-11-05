@@ -30,6 +30,11 @@ public class PassengerManager : MonoBehaviour
 
     System.Random rng = new System.Random(); // Şehirden bağımsız rastgele sayı üretici
 
+    // Diğer script'lerin (örneğin yön oku) okuyabilmesi için dışarıya açılan bilgiler.
+    // Sadece okunabilirler, dışarıdan değiştirilemezler.
+    public Vector3 TargetPosition => targetPos;
+    public bool IsCarryingPassenger => state == State.CarryingPassenger;
+
     void Start()
     {
         NewPickup();
