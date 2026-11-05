@@ -70,12 +70,20 @@ public class TrafficCar : MonoBehaviour
         toTarget.y = 0f;
         float distance = toTarget.magnitude;
 
-        // Önümüzde başka bir araç var mı? Işını aracın burnunun biraz önünden atıyoruz
-        // ki kendi çarpışma kutumuza çarpmasın. Sadece Rigidbody'si olanlar (araçlar) sayılır.
-        Vector3 rayStart = rb.position + Vector3.up * 0.7f + transform.forward * 2.2f;
-        bool blocked = Physics.Raycast(rayStart, transform.forward, out RaycastHit hit,
-                                       brakeDistance, ~0, QueryTriggerInteraction.Ignore)
-                       && hit.rigidbody != null;
+        // Gideceğimiz yönde başka bir araç var mı?
+        // İnce bir ışın yerine araç genişliğinde bir "kutu" fırlatıyoruz (BoxCast) ve bunu
+        // aracın burnunun baktığı yöne değil, GİDECEĞİ yöne atıyoruz. Böylece dönüş yaparken
+        // yolunun üstündeki araçları da görür.
+        Vector3 moveDirection = distance > 0.01f ? toTarget.normalized : transform.forward;
+        bool blocked = IsPathBlocked(moveDirection);
+
+        // Biri bize çarptıysa bir süre bekle (taksiyi sürüklemesin diye)
+        if (waitTimer > 0f)
+        {
+            waitTimer -= Time.fixedDeltaTime;
+            blocked = true;
+            currentSpeed = 0f;
+        }
 
         // Hızı yumuşakça hedef hıza yaklaştır (engel varsa 0'a)
         float desiredSpeed = blocked ? 0f : speed;
@@ -93,6 +101,33 @@ public class TrafficCar : MonoBehaviour
         }
 
         if (distance < 0.5f) AdvanceWaypoint();
+    }
+
+    // Önümüzdeki yolu araç genişliğinde bir kutuyla tarar.
+    // Kendi çarpışma kutumuzu ve Rigidbody'si olmayan şeyleri (bina, kaldırım) yok sayar.
+    bool IsPathBlocked(Vector3 moveDirection)
+    {
+        Vector3 origin = rb.position + Vector3.up * 0.75f;
+        Vector3 halfSize = new Vector3(1.1f, 0.5f, 0.5f);   // Aracın yarı genişliği, yarı yüksekliği
+        Quaternion orientation = Quaternion.LookRotation(moveDirection);
+
+        RaycastHit[] hits = Physics.BoxCastAll(origin, halfSize, moveDirection, orientation,
+                                               brakeDistance + 2f, ~0, QueryTriggerInteraction.Ignore);
+        foreach (RaycastHit h in hits)
+        {
+            if (h.rigidbody == null) continue;   // Araç değil
+            if (h.rigidbody == rb) continue;     // Kendimiz
+            return true;
+        }
+        return false;
+    }
+
+    // Bir araçla temas ettiğimiz sürece dur. Kinematik araç kimseden etkilenmez,
+    // bu yüzden durmazsa taksiyi buldozer gibi iter.
+    float waitTimer;
+    void OnCollisionStay(Collision collision)
+    {
+        if (collision.rigidbody != null) waitTimer = 1.5f;
     }
 
     void AdvanceWaypoint()
