@@ -19,8 +19,8 @@ public class PassengerManager : MonoBehaviour
     public float farePerMeter = 0.2f;      // Metre başına ücret (TL)
 
     [Header("Süre ve Bahşiş")]
-    public float expectedSpeed = 8f;       // Süre hesabı için beklenen ortalama hız (m/s)
-    public float extraTime = 10f;          // Süreye eklenen ek pay (saniye)
+    public float expectedSpeed = 12f;      // Süre hesabı için beklenen ortalama hız (m/s)
+    public float extraTime = 5f;           // Süreye eklenen ek pay (saniye)
     public float tipPercent = 0.3f;        // Tam memnuniyette bahşiş: ücretin %30'u
     public float latePenalty = 0.3f;       // Geç kalınca ücretten kesilen oran: %30
     public float crashPenalty = 15f;       // Her çarpışmada memnuniyet kaybı (puan)
@@ -45,6 +45,13 @@ public class PassengerManager : MonoBehaviour
     // Sadece okunabilirler, dışarıdan değiştirilemezler.
     public Vector3 TargetPosition => targetPos;
     public bool IsCarryingPassenger => state == State.CarryingPassenger;
+    public float CurrentFare => currentFare;
+    public float TimeLeft => timeLeft;
+    public float Satisfaction => satisfaction;
+    public float TotalMoney => totalMoney;
+    public int CompletedRides => completedRides;
+    public string Message => message;
+    public bool HasMessage => messageTimer > 0f;
 
     void Start()
     {
@@ -128,7 +135,7 @@ public class PassengerManager : MonoBehaviour
     }
 
     // Taksi ile hedef arasındaki yatay mesafe (yüksekliği yok sayar)
-    float DistanceToTarget()
+    public float DistanceToTarget()
     {
         Vector3 a = taxi.transform.position; a.y = 0f;
         Vector3 b = targetPos; b.y = 0f;
@@ -195,49 +202,5 @@ public class PassengerManager : MonoBehaviour
     {
         message = text;
         messageTimer = 3f;
-    }
-
-    // Ekrandaki görev bilgisi
-    void OnGUI()
-    {
-        if (taxi == null) return;
-
-        GUIStyle style = new GUIStyle(GUI.skin.label);
-        style.fontSize = 22;
-        style.normal.textColor = Color.white;
-
-        string task = state == State.GoingToPickup
-            ? "Görev: Yeşil işaretteki yolcuyu al"
-            : "Görev: Yolcuyu turuncu işarete götür";
-
-        GUI.Box(new Rect(10, 170, 460, 220), "");
-        GUI.Label(new Rect(20, 175, 440, 30), task, style);
-        GUI.Label(new Rect(20, 210, 440, 30), "Hedefe uzaklık: " + DistanceToTarget().ToString("0") + " m", style);
-
-        if (state == State.CarryingPassenger)
-        {
-            GUI.Label(new Rect(20, 245, 440, 30), "Yolculuk ücreti: " + currentFare.ToString("0") + " TL", style);
-
-            // Süre: 10 saniyenin altında kırmızı
-            GUIStyle timeStyle = new GUIStyle(style);
-            if (timeLeft < 10f) timeStyle.normal.textColor = Color.red;
-            string timeText = timeLeft >= 0f
-                ? "Kalan süre: " + timeLeft.ToString("0") + " sn"
-                : "GECİKTİN! (" + (-timeLeft).ToString("0") + " sn)";
-            GUI.Label(new Rect(20, 280, 440, 30), timeText, timeStyle);
-
-            GUI.Label(new Rect(20, 315, 440, 30), "Memnuniyet: %" + satisfaction.ToString("0"), style);
-        }
-
-        GUI.Label(new Rect(20, 350, 440, 30), "Kasa: " + totalMoney.ToString("0") + " TL  (" + completedRides + " yolculuk)", style);
-
-        if (messageTimer > 0f)
-        {
-            GUIStyle big = new GUIStyle(style);
-            big.fontSize = 36;
-            big.alignment = TextAnchor.MiddleCenter;
-            big.normal.textColor = Color.yellow;
-            GUI.Label(new Rect(0, Screen.height * 0.2f, Screen.width, 60), message, big);
-        }
     }
 }

@@ -18,7 +18,7 @@ public class TaxiController : MonoBehaviour
     public float gripStrength = 6f;          // Yüksek = az kayma, düşük = drift
 
     [Header("Zemin Kontrolü")]
-    public float groundCheckDistance = 0.7f; // Aracın altına atılan ışın uzunluğu
+    public float groundCheckDistance = 1f; // Aracın altına atılan ışın uzunluğu
 
     Rigidbody rb;
     float throttleInput;   // -1 (geri) ile +1 (ileri) arası
@@ -121,23 +121,5 @@ public class TaxiController : MonoBehaviour
         // Yana doğru kaymayı azaltır. Bu olmazsa araç buz üstündeymiş gibi kayar.
         float sideSpeed = Vector3.Dot(rb.linearVelocity, right);
         rb.AddForce(-right * sideSpeed * gripStrength, ForceMode.Acceleration);
-    }
-
-    // --- TEŞHİS EKRANI ---
-    // Oyun ekranının sol üstüne aracın durumunu yazar. Sorun çözülünce sileceğiz.
-    void OnGUI()
-    {
-        GUIStyle style = new GUIStyle(GUI.skin.label);
-        style.fontSize = 22;
-        style.normal.textColor = Color.white;
-
-        string klavye = Keyboard.current != null ? "BULUNDU" : "YOK";
-        string yerde = isGrounded ? "EVET" : "HAYIR";
-
-        GUI.Box(new Rect(10, 10, 360, 150), "");
-        GUI.Label(new Rect(20, 15, 340, 30), "Klavye: " + klavye, style);
-        GUI.Label(new Rect(20, 50, 340, 30), "Gaz: " + throttleInput, style);
-        GUI.Label(new Rect(20, 85, 340, 30), "Yerde mi: " + yerde, style);
-        GUI.Label(new Rect(20, 120, 340, 30), "Hız: " + SpeedKmh.ToString("0") + " km/s", style);
     }
 }
