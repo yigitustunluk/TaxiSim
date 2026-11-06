@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 0
+  m_Fog: 1
   m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   m_FogMode: 3
   m_FogDensity: 0.01
@@ -151,6 +151,7 @@ MonoBehaviour:
   blocksPerSide: 6
   blockSize: 30
   roadWidth: 12
+  baseMaterial: {fileID: 2100000, guid: c42a4d05b5713304ca50b479ce6b2484, type: 2}
   minBuildingHeight: 6
   maxBuildingHeight: 35
   seed: 42

@@ -11,6 +11,12 @@ public class CityGenerator : MonoBehaviour
     public float blockSize = 30f;      // Bir bloğun (kaldırım dahil) genişliği
     public float roadWidth = 12f;      // Yol genişliği
 
+    [Header("Malzeme Şablonu")]
+    // Emission'ı açık bir URP/Lit materyal. Bütün şehir malzemeleri bunun kopyası olur.
+    // Neden gerekli? Build alırken Unity, projede hiçbir materyalin kullanmadığı özellikleri
+    // (örneğin parlama/emission) siler. Bu şablon sayesinde Unity parlamanın kullanıldığını bilir.
+    public Material baseMaterial;
+
     [Header("Binalar")]
     public float minBuildingHeight = 6f;
     public float maxBuildingHeight = 35f;
@@ -188,11 +194,21 @@ public class CityGenerator : MonoBehaviour
     // URP projelerinde çalışan basit renkli materyal
     Material MakeMaterial(Color color)
     {
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null) shader = Shader.Find("Standard");
-        Material m = new Material(shader);
+        Material m;
+        if (baseMaterial != null)
+        {
+            m = new Material(baseMaterial);              // Şablonun kopyası
+        }
+        else
+        {
+            Debug.LogWarning("CityGenerator: Base Material boş! Build'de parlamalar çalışmayabilir.");
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            m = new Material(shader);
+        }
         m.SetColor("_BaseColor", color);
         m.color = color;
+        m.SetColor("_EmissionColor", Color.black);       // Varsayılan: parlamasın
         return m;
     }
 }
