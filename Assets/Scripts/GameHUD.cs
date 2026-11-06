@@ -49,7 +49,8 @@ public class GameHUD : MonoBehaviour
                 sb.AppendLine(Colored("GECİKTİN! " + (-t).ToString("0") + " sn", warningColor));
             }
 
-            sb.AppendLine("Ücret: " + passengers.CurrentFare.ToString("0") + " TL");
+            sb.AppendLine("Taksimetre: " + passengers.CurrentFare.ToString("0") + " TL");
+            sb.AppendLine("Gidilen yol: " + (passengers.MeterDistance / 1000f).ToString("0.00") + " km");
             sb.AppendLine("Memnuniyet: %" + passengers.Satisfaction.ToString("0"));
         }
 

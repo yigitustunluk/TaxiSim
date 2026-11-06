@@ -17,6 +17,7 @@ public class PassengerManager : MonoBehaviour
     public float maxStopSpeedKmh = 5f;     // Bu hızın altındaysan "durmuş" sayılırsın
     public float baseFare = 15f;           // Açılış ücreti (TL)
     public float farePerMeter = 0.2f;      // Metre başına ücret (TL)
+    public float farePerWaitSecond = 0.5f; // Dururken (trafikte beklerken) saniye başına ücret (TL)
 
     [Header("Süre ve Bahşiş")]
     public float expectedSpeed = 12f;      // Süre hesabı için beklenen ortalama hız (m/s)
@@ -31,7 +32,11 @@ public class PassengerManager : MonoBehaviour
 
     GameObject marker;          // Ekrandaki işaret (zemin halkası + ışık sütunu)
     Vector3 targetPos;          // Şu anki hedefin konumu
-    float currentFare;          // Taşınan yolcunun ödeyeceği ücret
+    float currentFare;          // Taksimetrede yazan ücret (yolculuk boyunca artar)
+    float estimatedFare;        // En kısa yoldan gidilseydi tutacak ücret (tahmini)
+    float meterDistance;        // Yolcu bindikten sonra gidilen gerçek mesafe (metre)
+    float waitTime;             // Yolcu taksideyken durarak geçen süre (saniye)
+    Vector3 lastTaxiPos;        // Taksinin bir önceki karedeki konumu
     float timeLeft;             // Kalan süre (saniye). Eksiye düşerse geç kalmışsın.
     float satisfaction;         // Yolcu memnuniyeti (0-100)
     float totalMoney;           // Kasadaki toplam para
@@ -46,6 +51,7 @@ public class PassengerManager : MonoBehaviour
     public Vector3 TargetPosition => targetPos;
     public bool IsCarryingPassenger => state == State.CarryingPassenger;
     public float CurrentFare => currentFare;
+    public float MeterDistance => meterDistance;
     public float TimeLeft => timeLeft;
     public float Satisfaction => satisfaction;
     public float TotalMoney => totalMoney;
@@ -68,7 +74,11 @@ public class PassengerManager : MonoBehaviour
     {
         if (taxi == null) return;
         if (messageTimer > 0f) messageTimer -= Time.deltaTime;
-        if (state == State.CarryingPassenger) timeLeft -= Time.deltaTime;
+        if (state == State.CarryingPassenger)
+        {
+            timeLeft -= Time.deltaTime;
+            RunMeter();
+        }
 
         // İşaretin içinde ve neredeyse durmuş muyuz?
         if (DistanceToTarget() < stopRadius && taxi.SpeedKmh < maxStopSpeedKmh)
@@ -92,9 +102,19 @@ public class PassengerManager : MonoBehaviour
         state = State.CarryingPassenger;
         targetPos = RandomRoadPoint(pickupPos, 80f);
 
-        // Ücret: açılış + kuş uçuşu mesafe x metre ücreti
+        // Taksimetreyi sıfırla: açılış ücretiyle başlar
+        meterDistance = 0f;
+        waitTime = 0f;
+        lastTaxiPos = FlatTaxiPosition();
+        currentFare = baseFare;
+
+        // Tahmini ücret: şehir ızgara olduğu için en kısa yol "Manhattan mesafesi"dir
+        // (yatay fark + dikey fark). Kuş uçuşu ile gidilemez, binalar var.
+        float manhattan = Mathf.Abs(targetPos.x - pickupPos.x) + Mathf.Abs(targetPos.z - pickupPos.z);
+        estimatedFare = baseFare + manhattan * farePerMeter;
+
+        // Süre hesabı için kuş uçuşu mesafe (bu değerleri sen ayarladın, bozmuyoruz)
         float distance = Vector3.Distance(pickupPos, targetPos);
-        currentFare = baseFare + distance * farePerMeter;
 
         // Süre: mesafeyi beklenen hızla gitmek için gereken zaman + ek pay
         timeLeft = distance / expectedSpeed + extraTime;
@@ -117,13 +137,35 @@ public class PassengerManager : MonoBehaviour
         }
         else
         {
-            payment = currentFare * (1f - latePenalty);
+            // Geç kalınca yolcu taksimetreye itiraz eder: en fazla tahmini ücreti öder,
+            // o da %30 eksik. Böylece yolu bilerek uzatıp taksimetreyi şişirmek işe yaramaz.
+            payment = Mathf.Min(currentFare, estimatedFare) * (1f - latePenalty);
             ShowMessage("Geç kaldın! Sadece " + payment.ToString("0") + " TL ödendi");
         }
 
         totalMoney += payment + tip;
         completedRides++;
         NewPickup();
+    }
+
+    // TAKSİMETRE: Her karede taksinin ne kadar yol aldığını ölçüp ücrete ekler.
+    // Dururken de (trafik, kırmızı ışık) zaman ücreti işler, gerçek taksimetre gibi.
+    void RunMeter()
+    {
+        Vector3 pos = FlatTaxiPosition();
+        meterDistance += Vector3.Distance(pos, lastTaxiPos);
+        lastTaxiPos = pos;
+
+        if (taxi.SpeedKmh < maxStopSpeedKmh) waitTime += Time.deltaTime;
+
+        currentFare = baseFare + meterDistance * farePerMeter + waitTime * farePerWaitSecond;
+    }
+
+    Vector3 FlatTaxiPosition()
+    {
+        Vector3 p = taxi.transform.position;
+        p.y = 0f;
+        return p;
     }
 
     // Taksi bir şeye çarptığında TaxiController tarafından çağrılır
