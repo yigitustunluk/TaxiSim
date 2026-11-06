@@ -25,6 +25,10 @@ public class CityGenerator : MonoBehaviour
     // DayNightCycle bu ışıkları gece açıp gündüz kapatır
     [HideInInspector] public List<Light> streetLights = new List<Light>();
     [HideInInspector] public Material lampHeadMaterial;     // Lamba başlığının parlayan malzemesi
+    [HideInInspector] public List<Material> buildingMaterials = new List<Material>(); // Gece pencereleri yakmak için
+
+    Texture2D windowTexture;     // Duvar + pencere camı deseni (gündüz görünen)
+    Texture2D windowLightMap;    // Hangi pencerelerin ışığı yanıyor (gece parlayan)
 
     void Start()
     {
@@ -41,6 +45,8 @@ public class CityGenerator : MonoBehaviour
         float cell = blockSize + roadWidth;          // Bir blok + bir yol
         int half = blocksPerSide / 2;
         float citySize = blocksPerSide * cell + roadWidth;
+
+        CreateWindowTextures();
 
         Material pole = MakeMaterial(new Color(0.15f, 0.15f, 0.16f));
         lampHeadMaterial = MakeMaterial(Color.white);
@@ -76,7 +82,7 @@ public class CityGenerator : MonoBehaviour
                         float h = Random.Range(minBuildingHeight, maxBuildingHeight);
                         Vector3 pos = center + new Vector3((i - 0.5f) * lot, 0.2f + h / 2f, (j - 0.5f) * lot);
                         Color c = Color.HSVToRGB(Random.Range(0f, 1f), 0.15f, Random.Range(0.55f, 0.85f));
-                        CreateBox("Bina", pos, new Vector3(footprint, h, footprint), MakeMaterial(c));
+                        CreateBox("Bina", pos, new Vector3(footprint, h, footprint), MakeBuildingMaterial(c, footprint, h));
                     }
                 }
             }
@@ -116,6 +122,67 @@ public class CityGenerator : MonoBehaviour
         go.transform.localScale = size;
         go.GetComponent<Renderer>().sharedMaterial = mat;
         return go;
+    }
+
+    // Pencereli bina malzemesi. Deseni binanın boyutuna göre tekrarlar (tiling),
+    // böylece her kat ve pencere gerçek boyutunda görünür.
+    Material MakeBuildingMaterial(Color color, float width, float height)
+    {
+        Material m = MakeMaterial(color);
+        m.SetTexture("_BaseMap", windowTexture);
+        m.SetTexture("_EmissionMap", windowLightMap);
+        m.EnableKeyword("_EMISSION");
+        m.SetColor("_EmissionColor", Color.black);   // Gündüz sönük, DayNightCycle gece yakar
+
+        // Desen 8x8 pencere. Bir pencere ~3 m genişlikte, bir kat ~3.5 m yükseklikte.
+        // Pencere ve kat sayısını TAM SAYIYA yuvarlıyoruz. Yoksa desen binanın kenarında
+        // ortasından kesilir ve yarım pencereler (özellikle en altta) oluşur.
+        int windowsAcross = Mathf.Max(1, Mathf.RoundToInt(width / 3f));
+        int floors = Mathf.Max(1, Mathf.RoundToInt(height / 3.5f));
+        m.SetTextureScale("_BaseMap", new Vector2(windowsAcross / 8f, floors / 8f));
+        // Her binada desenin farklı bir yerinden başla ki aynı pencereler yanmasın
+        m.SetTextureOffset("_BaseMap", new Vector2(Random.Range(0, 8) / 8f, Random.Range(0, 8) / 8f));
+
+        buildingMaterials.Add(m);
+        return m;
+    }
+
+    // Kodla iki resim (texture) çizer: pencereli duvar ve yanan pencereler.
+    // Dışarıdan resim dosyası indirmeye gerek kalmaz.
+    void CreateWindowTextures()
+    {
+        const int cells = 8, cellPx = 32, size = cells * cellPx;
+        windowTexture = new Texture2D(size, size);
+        windowLightMap = new Texture2D(size, size);
+        System.Random rng = new System.Random(seed + 1);   // Şehrin rastgeleliğini bozmasın diye ayrı
+
+        Color wall = Color.white;                          // Duvar: binanın kendi rengini alır
+        Color glass = new Color(0.22f, 0.26f, 0.34f);      // Cam: koyu mavi-gri
+        Color warm = new Color(1f, 0.82f, 0.5f);           // Sarı ampul
+        Color cool = new Color(0.75f, 0.88f, 1f);          // Beyaz-mavi (televizyon, LED)
+
+        for (int cx = 0; cx < cells; cx++)
+        {
+            for (int cy = 0; cy < cells; cy++)
+            {
+                // Pencerelerin %40'ı yanık olsun, bunların bir kısmı soğuk renkli
+                Color lit = Color.black;
+                if (rng.NextDouble() < 0.4) lit = rng.NextDouble() < 0.7 ? warm : cool;
+
+                for (int px = 0; px < cellPx; px++)
+                {
+                    for (int py = 0; py < cellPx; py++)
+                    {
+                        bool isWindow = px >= 7 && px < 25 && py >= 8 && py < 26;
+                        int x = cx * cellPx + px, y = cy * cellPx + py;
+                        windowTexture.SetPixel(x, y, isWindow ? glass : wall);
+                        windowLightMap.SetPixel(x, y, isWindow ? lit : Color.black);
+                    }
+                }
+            }
+        }
+        windowTexture.Apply();
+        windowLightMap.Apply();
     }
 
     // URP projelerinde çalışan basit renkli materyal

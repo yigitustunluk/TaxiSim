@@ -156,10 +156,11 @@ MonoBehaviour:
   seed: 42
   lampHeight: 5
   lampRange: 20
-  lampIntensity: 6
+  lampIntensity: 10
   lampColor: {r: 1, g: 0.78, b: 0.45, a: 1}
   streetLights: []
   lampHeadMaterial: {fileID: 0}
+  buildingMaterials: []
 --- !u!4 &157382671
 Transform:
   m_ObjectHideFlags: 0
@@ -567,9 +568,9 @@ MonoBehaviour:
   dayColor: {r: 1, g: 0.96, b: 0.88, a: 1}
   sunsetColor: {r: 1, g: 0.5, b: 0.25, a: 1}
   dayAmbient: {r: 0.55, g: 0.58, b: 0.65, a: 1}
-  nightAmbient: {r: 0.05, g: 0.06, b: 0.12, a: 1}
+  nightAmbient: {r: 0.16078432, g: 0.18039216, b: 0.3019608, a: 1}
   daySkyFog: {r: 0.62, g: 0.7, b: 0.8, a: 1}
-  nightSky: {r: 0.03, g: 0.05, b: 0.11, a: 1}
+  nightSky: {r: 0.050980393, g: 0.078431375, b: 0.18039216, a: 1}
   fogDensity: 0.006
 --- !u!1 &538237877
 GameObject:

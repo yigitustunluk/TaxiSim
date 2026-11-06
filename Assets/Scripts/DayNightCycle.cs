@@ -106,6 +106,10 @@ public class DayNightCycle : MonoBehaviour
         // "Bloom" efekti etrafında hale oluşturur.
         Color glow = on ? city.lampColor * 4f : Color.black;
         city.lampHeadMaterial.SetColor("_EmissionColor", glow);
+
+        // Binaların pencerelerini yak ya da söndür
+        Color windows = on ? Color.white * 1.3f : Color.black;
+        foreach (Material m in city.buildingMaterials) m.SetColor("_EmissionColor", windows);
     }
 
     // Taksinin önüne iki spot ışık (far) yerleştirir
