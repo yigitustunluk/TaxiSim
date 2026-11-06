@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // Oyun başladığında ızgara (grid) şeklinde basit bir şehir oluşturur:
 // asfalt zemin, kaldırımlı bloklar ve her blokta 4 bina.
@@ -14,6 +15,16 @@ public class CityGenerator : MonoBehaviour
     public float minBuildingHeight = 6f;
     public float maxBuildingHeight = 35f;
     public int seed = 42;              // Aynı sayı = her seferinde aynı şehir
+
+    [Header("Sokak Lambaları")]
+    public float lampHeight = 5f;
+    public float lampRange = 20f;
+    public float lampIntensity = 6f;
+    public Color lampColor = new Color(1f, 0.78f, 0.45f);   // Sıcak sarı (sodyum lamba)
+
+    // DayNightCycle bu ışıkları gece açıp gündüz kapatır
+    [HideInInspector] public List<Light> streetLights = new List<Light>();
+    [HideInInspector] public Material lampHeadMaterial;     // Lamba başlığının parlayan malzemesi
 
     void Start()
     {
@@ -31,6 +42,10 @@ public class CityGenerator : MonoBehaviour
         int half = blocksPerSide / 2;
         float citySize = blocksPerSide * cell + roadWidth;
 
+        Material pole = MakeMaterial(new Color(0.15f, 0.15f, 0.16f));
+        lampHeadMaterial = MakeMaterial(Color.white);
+        lampHeadMaterial.EnableKeyword("_EMISSION");   // Kendi kendine parlayabilsin
+
         // Asfalt zemin: üst yüzeyi tam y=0'da olacak şekilde
         CreateBox("Asfalt", new Vector3(0f, -0.5f, 0f),
                   new Vector3(citySize + 40f, 1f, citySize + 40f), asphalt);
@@ -47,6 +62,10 @@ public class CityGenerator : MonoBehaviour
                                             new Vector3(blockSize, 0.2f, blockSize), sidewalk);
                 curb.AddComponent<Sidewalk>();   // "Ben kaldırımım" etiketi
 
+                // Her bloğun bir köşesine (kavşağa bakan) bir sokak lambası
+                Vector3 corner = center + new Vector3(-blockSize / 2f + 1f, 0.2f, -blockSize / 2f + 1f);
+                CreateLamp(corner, pole);
+
                 // Bloğu 2x2 parsele böl, her parsele bir bina koy
                 float lot = blockSize / 2f;
                 float footprint = lot - 3f;          // Binalar arasında boşluk kalsın
@@ -62,6 +81,29 @@ public class CityGenerator : MonoBehaviour
                 }
             }
         }
+    }
+
+    // Direk + parlayan başlık + gerçek ışık kaynağından oluşan bir sokak lambası
+    void CreateLamp(Vector3 basePos, Material poleMat)
+    {
+        CreateBox("LambaDirek", basePos + Vector3.up * (lampHeight / 2f),
+                  new Vector3(0.2f, lampHeight, 0.2f), poleMat);
+
+        GameObject head = CreateBox("LambaBasi", basePos + Vector3.up * lampHeight,
+                                    new Vector3(0.9f, 0.25f, 0.9f), lampHeadMaterial);
+        head.GetComponent<Collider>().enabled = false;
+
+        GameObject lightObj = new GameObject("LambaIsigi");
+        lightObj.transform.SetParent(transform);
+        lightObj.transform.position = basePos + Vector3.up * (lampHeight - 0.4f);
+        Light l = lightObj.AddComponent<Light>();
+        l.type = LightType.Point;
+        l.range = lampRange;
+        l.intensity = lampIntensity;
+        l.color = lampColor;
+        l.shadows = LightShadows.None;   // 36 lamba gölge yaparsa oyun kasar
+        l.enabled = false;
+        streetLights.Add(l);
     }
 
     // Verilen konum ve boyutta, çarpışması olan bir küp oluşturur
