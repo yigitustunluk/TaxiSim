@@ -31,6 +31,8 @@ public class TaxiController : MonoBehaviour
 
     // Hızı km/s olarak verir. İleride taksimetre ve arayüzde kullanacağız.
     public float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
+    public float Throttle => throttleInput;              // Motor sesi için: gaza basılıyor mu
+    public float MaxSpeedKmh => maxSpeed * 3.6f;
 
     // ÇARPIŞMA OLAYI (event): Taksi sert bir şeye çarpınca bunu "duyurur".
     // Başka script'ler (PassengerManager gibi) bu duyuruya abone olup tepki verir.
