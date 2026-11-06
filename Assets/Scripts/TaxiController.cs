@@ -26,6 +26,9 @@ public class TaxiController : MonoBehaviour
     bool brakeInput;
     bool isGrounded;
 
+    // Taksi şu an kaldırımın üstünde mi? PassengerManager bunu okuyup ceza verir.
+    public bool IsOnSidewalk { get; private set; }
+
     // Hızı km/s olarak verir. İleride taksimetre ve arayüzde kullanacağız.
     public float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
 
@@ -82,8 +85,10 @@ public class TaxiController : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
 
         // Araç yerde mi? Havadayken gaz ve direksiyon çalışmaz.
-        isGrounded = Physics.Raycast(transform.position, Vector3.down,
+        // Işın bir şeye çarparsa, neye çarptığını "hit" içine yazar.
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit,
                                      groundCheckDistance, ~0, QueryTriggerInteraction.Ignore);
+        IsOnSidewalk = isGrounded && hit.collider.GetComponent<Sidewalk>() != null;
         if (!isGrounded) return;
 
         Vector3 forward = transform.forward;

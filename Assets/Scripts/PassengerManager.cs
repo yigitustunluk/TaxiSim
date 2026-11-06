@@ -25,6 +25,7 @@ public class PassengerManager : MonoBehaviour
     public float tipPercent = 0.3f;        // Tam memnuniyette bahşiş: ücretin %30'u
     public float latePenalty = 0.3f;       // Geç kalınca ücretten kesilen oran: %30
     public float crashPenalty = 15f;       // Her çarpışmada memnuniyet kaybı (puan)
+    public float sidewalkPenalty = 25f;    // Kaldırımda geçen her saniye memnuniyet kaybı (puan)
 
     // Oyuncu şu an ne yapıyor? Bu tür "durum" listelerine enum denir.
     enum State { GoingToPickup, CarryingPassenger }
@@ -78,6 +79,13 @@ public class PassengerManager : MonoBehaviour
         {
             timeLeft -= Time.deltaTime;
             RunMeter();
+
+            // Kaldırımda sürmek yolcuyu korkutur
+            if (taxi.IsOnSidewalk)
+            {
+                satisfaction = Mathf.Max(0f, satisfaction - sidewalkPenalty * Time.deltaTime);
+                ShowMessage("Kaldırımdan in! Yolcu korkuyor");
+            }
         }
 
         // İşaretin içinde ve neredeyse durmuş muyuz?

@@ -43,8 +43,9 @@ public class CityGenerator : MonoBehaviour
                 Vector3 center = new Vector3(x * cell + cell / 2f, 0f, z * cell + cell / 2f);
 
                 // Kaldırım: 20 cm yüksek. Taksi buna çarpınca durur, yani yolda kalır.
-                CreateBox("Kaldirim", center + Vector3.up * 0.1f,
-                          new Vector3(blockSize, 0.2f, blockSize), sidewalk);
+                GameObject curb = CreateBox("Kaldirim", center + Vector3.up * 0.1f,
+                                            new Vector3(blockSize, 0.2f, blockSize), sidewalk);
+                curb.AddComponent<Sidewalk>();   // "Ben kaldırımım" etiketi
 
                 // Bloğu 2x2 parsele böl, her parsele bir bina koy
                 float lot = blockSize / 2f;
