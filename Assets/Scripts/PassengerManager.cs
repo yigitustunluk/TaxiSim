@@ -63,7 +63,8 @@ public class PassengerManager : MonoBehaviour
     void Start()
     {
         taxi.OnCrash += HandleCrash;   // Taksinin çarpışma duyurusuna abone ol
-        totalMoney = SaveData.Money;   // Önceki oyunlardan kalan parayı yükle
+        totalMoney = SaveData.Money;              // Kayıttan yükle
+        completedRides = SaveData.CompletedRides;
         NewPickup();
     }
 
@@ -152,9 +153,9 @@ public class PassengerManager : MonoBehaviour
             ShowMessage("Geç kaldın! Sadece " + payment.ToString("0") + " TL ödendi");
         }
 
-        totalMoney += payment + tip;
-        SaveData.Money = totalMoney;   // Kalıcı olarak kaydet
-        completedRides++;
+        SaveData.RecordRide(payment + tip);       // Otomatik kayıt
+        totalMoney = SaveData.Money;
+        completedRides = SaveData.CompletedRides;
         NewPickup();
     }
 
