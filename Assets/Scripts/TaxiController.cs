@@ -35,6 +35,8 @@ public class TaxiController : MonoBehaviour
     public float MaxSpeedKmh => maxSpeed * 3.6f;
     public float Steer => steerInput;                                       // -1 sol, +1 sağ
     public float ForwardSpeed => Vector3.Dot(rb.linearVelocity, transform.forward); // m/s, geri giderken eksi
+    // Fren yapılıyor mu? Space'e basılıyorsa ya da ileri giderken S'ye basılıyorsa
+    public bool IsBraking => brakeInput || (throttleInput < 0f && ForwardSpeed > 0.5f);
 
     // ÇARPIŞMA OLAYI (event): Taksi sert bir şeye çarpınca bunu "duyurur".
     // Başka script'ler (PassengerManager gibi) bu duyuruya abone olup tepki verir.

@@ -36,6 +36,7 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 - **Traffic AI**: cars navigate the road grid intersection by intersection, keep to the right lane, and brake for obstacles using a `BoxCast` along their *intended* path, so they also see cars while turning.
 - **Passenger loop**: state machine (`enum`) for pick-up / drop-off, time limit, tips and satisfaction.
 - **Day/night cycle**: animated sun, flat ambient and fog driven by time of day, headlights and street lamps that switch on at dusk, lit building windows.
+- **Vehicle visuals**: wheels roll without slipping (angle = distance / radius, radius measured from the mesh) and the front wheels steer; tail lights glow and brighten when braking, with a backward-facing spot light on the road.
 - **Procedural textures**: building window patterns are drawn in code, tiled to whole floors and windows.
 - **Save system**: 3 save slots stored as JSON files in `Application.persistentDataPath` (`JsonUtility`), auto-save after each ride, slot overview with money, rides and last played time, overwrite confirmation. The game code talks only to a static `SaveData` class, so the storage format could change without touching gameplay scripts.
 - **Passenger types as data**: each type is a `ScriptableObject` (spawn weight, fare/time multipliers, tip rate, penalty multiplier, speed limit, speed-based tip). Types are chosen with weighted random selection; trip time adapts to the passenger's speed limit.
@@ -75,6 +76,7 @@ Some problems I ran into and how they were solved:
 | `UpgradeDefinition` | ScriptableObject describing one upgrade |
 | `PassengerType` | ScriptableObject describing one passenger type |
 | `TaxiUpgrades` | Applies purchased upgrades to the taxi |
+| `WheelVisuals` / `BrakeLights` | Wheel spin and steering, tail and brake lights |
 | `GarageMenu` / `UpgradeRow` | Garage screen and its generated rows |
 
 ## Running

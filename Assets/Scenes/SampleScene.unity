@@ -1152,6 +1152,7 @@ GameObject:
   - component: {fileID: 538237884}
   - component: {fileID: 538237886}
   - component: {fileID: 538237887}
+  - component: {fileID: 538237888}
   m_Layer: 0
   m_Name: Taxi
   m_TagString: Untagged
@@ -1395,6 +1396,25 @@ MonoBehaviour:
   backRight: {fileID: 1554294061}
   maxSteerAngle: 30
   steerSmooth: 10
+--- !u!114 &538237888
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 538237877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 992646da4fd9eab4eaac3b57eaa369d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BrakeLights
+  baseMaterial: {fileID: 2100000, guid: c42a4d05b5713304ca50b479ce6b2484, type: 2}
+  leftOffset: {x: -0.615, y: 0.47, z: -2.01}
+  rightOffset: {x: 0.615, y: 0.47, z: -2.01}
+  lampSize: {x: 0.35, y: 0.12, z: 0.05}
+  lampColor: {r: 1, g: 0.08, b: 0.05, a: 1}
+  idleGlow: 0.6
+  brakeGlow: 3
 --- !u!1 &556779825
 GameObject:
   m_ObjectHideFlags: 0
