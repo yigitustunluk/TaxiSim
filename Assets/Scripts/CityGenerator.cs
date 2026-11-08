@@ -195,10 +195,16 @@ public class CityGenerator : MonoBehaviour
     // Büyük bloklarda ortadaki parseller boş kalır: avlu.
     void CreateBuildings(Rect r, bool touchesMain)
     {
-        int nx = Mathf.Max(1, Mathf.RoundToInt(r.width / lotSize));
-        int nz = Mathf.Max(1, Mathf.RoundToInt(r.height / lotSize));
-        float lotW = r.width / nx, lotD = r.height / nz;
-        float edgeGap = 1.5f;                       // Kaldırımda yürüme payı
+        // Binalar kaldırımın kenarından en az 2.5 m içeride başlar. Bu şerit; trafik ışığı
+        // direkleri, sokak lambaları ve yolcu işaretleri için boş kalır.
+        // (Önceki sürümde tek parselli dar bloklarda bina kaldırımın kenarına taşabiliyordu.)
+        const float edgeGap = 2.5f;
+        Rect inner = new Rect(r.xMin + edgeGap, r.yMin + edgeGap, r.width - 2f * edgeGap, r.height - 2f * edgeGap);
+        if (inner.width < 4f || inner.height < 4f) return;
+
+        int nx = Mathf.Max(1, Mathf.RoundToInt(inner.width / lotSize));
+        int nz = Mathf.Max(1, Mathf.RoundToInt(inner.height / lotSize));
+        float lotW = inner.width / nx, lotD = inner.height / nz;
 
         for (int a = 0; a < nx; a++)
         {
@@ -207,16 +213,18 @@ public class CityGenerator : MonoBehaviour
                 bool interior = a > 0 && a < nx - 1 && b > 0 && b < nz - 1;
                 if (interior) continue;              // Avlu
 
-                float w = lotW - 2f, d = lotD - 2f;  // Binalar arası 2 m boşluk
+                // Komşu binalarla arada 2 m boşluk. Bloğun dış kenarında boşluk gerekmez.
+                float w = lotW - ((a > 0 ? 1f : 0f) + (a < nx - 1 ? 1f : 0f));
+                float d = lotD - ((b > 0 ? 1f : 0f) + (b < nz - 1 ? 1f : 0f));
                 if (w < 4f || d < 4f) continue;
 
                 float h = touchesMain ? Random.Range(14f, 45f) : Random.Range(5f, 14f);
                 if (Random.value < 0.15f) h *= 0.5f;    // Ara sıra alçak bir bina, siluet düz olmasın
 
-                Vector3 pos = new Vector3(r.xMin + lotW * (a + 0.5f), 0.2f + h / 2f, r.yMin + lotD * (b + 0.5f));
-                // Kenar parsellerdeki binaları kaldırımdan biraz içeri çek
-                pos.x = Mathf.Clamp(pos.x, r.xMin + edgeGap + w / 2f, r.xMax - edgeGap - w / 2f);
-                pos.z = Mathf.Clamp(pos.z, r.yMin + edgeGap + d / 2f, r.yMax - edgeGap - d / 2f);
+                // Parselin içinde, kenar boşluklarına göre konum
+                float x0 = inner.xMin + lotW * a + (a > 0 ? 1f : 0f);
+                float z0 = inner.yMin + lotD * b + (b > 0 ? 1f : 0f);
+                Vector3 pos = new Vector3(x0 + w / 2f, 0.2f + h / 2f, z0 + d / 2f);
 
                 Color c = Color.HSVToRGB(Random.Range(0f, 1f), 0.15f, Random.Range(0.55f, 0.85f));
                 CreateBox("Bina", pos, new Vector3(w, h, d), MakeBuildingMaterial(c, Mathf.Max(w, d), h));

@@ -274,12 +274,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 157382669}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2c5b7ffbdb804cd4eadc2606747e9d2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrafficLightSystem
-  city: {fileID: 157382670}
+  layout: {fileID: 157382673}
   baseMaterial: {fileID: 2100000, guid: c42a4d05b5713304ca50b479ce6b2484, type: 2}
   taxi: {fileID: 538237883}
   minViolationSpeed: 2
@@ -305,6 +305,7 @@ MonoBehaviour:
   sideRoadWidth: 9
   mainRoadsPerAxis: 2
   closedStreetRatio: 0.3
+  sideLightChance: 0.35
   seed: 7
 --- !u!1 &225356673
 GameObject:
@@ -837,8 +838,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4ee925e45e62cf14ebffaa5af282e230, type: 2}
   - {fileID: 11400000, guid: b4ace477116d4ec4facc6669cbd4128e, type: 2}
   - {fileID: 11400000, guid: 53ad53a1a019d42439022e149dd6e295, type: 2}
-  expectedSpeed: 10
-  extraTime: 8
+  expectedSpeed: 8.5
+  extraTime: 4
   timePerIntersection: 3
   tipPercent: 0.3
   latePenalty: 0.3
