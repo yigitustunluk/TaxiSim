@@ -174,7 +174,7 @@ public class PassengerManager : MonoBehaviour
 
         PlaceMarker(targetPos, new Color(1f, 0.55f, 0f)); // Turuncu
         string greeting = currentType != null ? currentType.pickupMessage : "Yolcu bindi!";
-        ShowMessage(greeting + " " + timeLeft.ToString("0") + " saniyen var.");
+        ShowMessage(greeting);   // Süre zaten ekranın üstünde yazıyor, tekrar etmeye gerek yok
     }
 
     void DropOff()

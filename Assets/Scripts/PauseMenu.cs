@@ -24,7 +24,7 @@ public class PauseMenu : MonoBehaviour
         if (infoText != null)
         {
             infoText.text =
-                "<size=150%><b>DURAKLATILDI</b></size>\n\n" +
+                "<color=#F2C200><size=150%><b>DURAKLATILDI</b></size></color>\n\n" +
                 "W / S  —  Gaz / Geri\n" +
                 "A / D  —  Direksiyon\n" +
                 "Space  —  Fren\n" +
