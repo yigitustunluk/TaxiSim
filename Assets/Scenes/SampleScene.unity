@@ -994,6 +994,7 @@ GameObject:
   - component: {fileID: 538237878}
   - component: {fileID: 538237885}
   - component: {fileID: 538237884}
+  - component: {fileID: 538237886}
   m_Layer: 0
   m_Name: Taxi
   m_TagString: Untagged
@@ -1203,6 +1204,22 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &538237886
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 538237877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6eaa49bc09319c04583b7878fa34c33a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaxiUpgrades
+  upgrades:
+  - {fileID: 11400000, guid: 302b534bf88914941a09b3777c94deb6, type: 2}
+  - {fileID: 11400000, guid: 8f5ceccb1c0e66542bd06420771bc02a, type: 2}
+  - {fileID: 11400000, guid: 7ff07ecd0ae15454da7b092603d3b028, type: 2}
 --- !u!1 &672795835
 GameObject:
   m_ObjectHideFlags: 0
