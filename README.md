@@ -2,6 +2,8 @@
 
 A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a procedurally generated city, beat the clock, avoid traffic, and keep your passengers happy.
 
+![Gameplay](Docs/gameplay.gif)
+
 | Day | Night |
 |---|---|
 | ![Day](Docs/screenshot-day.png) | ![Night](Docs/screenshot-night.png) |
