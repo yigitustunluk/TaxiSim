@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 // Duraklatma menüsü. Canvas objesine eklenir.
 // ESC (ya da P) ile oyun durur, menü açılır. Tekrar basınca devam eder.
@@ -13,6 +14,7 @@ public class PauseMenu : MonoBehaviour
     [Header("Bağlantılar (Inspector'dan sürükle)")]
     public GameObject pausePanel;     // Açılıp kapanacak panel
     public TMP_Text infoText;         // Paneldeki başlık ve kontroller yazısı
+    public string menuSceneName = "MainMenu";
 
     public bool IsPaused { get; private set; }
 
@@ -46,6 +48,12 @@ public class PauseMenu : MonoBehaviour
     public void Resume()
     {
         SetPaused(false);
+    }
+
+    public void GoToMainMenu()
+    {
+        SetPaused(false);   // Zamanı ve sesi geri aç, yoksa menü donuk açılır
+        SceneManager.LoadScene(menuSceneName);
     }
 
     public void QuitGame()

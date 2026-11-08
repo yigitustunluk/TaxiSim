@@ -23,6 +23,7 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 | Space | Brake |
 | H | Horn |
 | T (hold) | Speed up time ×20 |
+| ESC / P | Pause menu |
 
 ## Features
 
@@ -32,6 +33,7 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 - **Passenger loop**: state machine (`enum`) for pick-up / drop-off, time limit, tips and satisfaction.
 - **Day/night cycle**: animated sun, flat ambient and fog driven by time of day, headlights and street lamps that switch on at dusk, lit building windows.
 - **Procedural textures**: building window patterns are drawn in code, tiled to whole floors and windows.
+- **Menus**: main menu scene and an ESC pause menu (`Time.timeScale`, audio pause, scene loading with `SceneManager`).
 - **UI**: Canvas + TextMeshPro HUD with auto-sizing layout (Vertical Layout Group + Content Size Fitter).
 - **Procedural audio**: engine sound synthesized in `OnAudioFilterRead` with gear shifts; optional recorded clip with pitch control. Two-tone horn.
 
@@ -59,11 +61,12 @@ Some problems I ran into and how they were solved:
 | `DayNightCycle` | Sun, ambient, fog, sky, headlights, lamps, windows |
 | `EngineSound` | Engine and horn audio |
 | `Sidewalk` | Marker component for sidewalk detection |
+| `MainMenu` / `PauseMenu` | Main menu, pause, return to menu, quit |
 
 ## Running
 
 - **Play**: download the latest build from the Releases page and run `TaxiSim.exe` (Windows).
-- **Open in Unity**: Unity 6.3 LTS (6000.3.11f1) or newer, open `Assets/Scenes/SampleScene`.
+- **Open in Unity**: Unity 6.3 LTS (6000.3.11f1) or newer, open `Assets/Scenes/MainMenu` and press Play.
 
 ## Credits
 
