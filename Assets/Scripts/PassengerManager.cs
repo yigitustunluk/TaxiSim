@@ -40,7 +40,7 @@ public class PassengerManager : MonoBehaviour
     Vector3 lastTaxiPos;        // Taksinin bir önceki karedeki konumu
     float timeLeft;             // Kalan süre (saniye). Eksiye düşerse geç kalmışsın.
     float satisfaction;         // Yolcu memnuniyeti (0-100)
-    float totalMoney;           // Kasadaki toplam para
+    float totalMoney;           // Kasadaki toplam para (kayıttan yüklenir, her yolculukta kaydedilir)
     int completedRides;         // Tamamlanan yolculuk sayısı
     string message = "";        // Ekranda kısa süre görünen mesaj
     float messageTimer;
@@ -63,6 +63,7 @@ public class PassengerManager : MonoBehaviour
     void Start()
     {
         taxi.OnCrash += HandleCrash;   // Taksinin çarpışma duyurusuna abone ol
+        totalMoney = SaveData.Money;   // Önceki oyunlardan kalan parayı yükle
         NewPickup();
     }
 
@@ -152,6 +153,7 @@ public class PassengerManager : MonoBehaviour
         }
 
         totalMoney += payment + tip;
+        SaveData.Money = totalMoney;   // Kalıcı olarak kaydet
         completedRides++;
         NewPickup();
     }
