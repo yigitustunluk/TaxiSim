@@ -24,7 +24,12 @@ public class SlotMenu : MonoBehaviour
 
     List<SlotRow> rows = new List<SlotRow>();
     bool loadMode;
-    int pendingSlot = -1;     // Onay bekleyen yuva
+
+    // Onay penceresi iki iş için kullanılıyor: üzerine yazma ve silme.
+    // Hangisini beklediğimizi ve hangi yuva için olduğunu hatırlamamız gerekiyor.
+    enum PendingAction { None, Overwrite, Delete }
+    PendingAction pendingAction = PendingAction.None;
+    int pendingSlot = -1;
 
     void Start()
     {
@@ -71,9 +76,8 @@ public class SlotMenu : MonoBehaviour
         // Yeni oyun: yuva doluysa önce onay iste
         if (SaveData.SlotExists(slot) && confirmPanel != null)
         {
-            pendingSlot = slot;
-            confirmText.text = "Kayıt " + (slot + 1) + " silinip yeni oyun başlatılacak.\nEmin misin?";
-            confirmPanel.SetActive(true);
+            AskConfirm(PendingAction.Overwrite, slot,
+                "Kayıt " + (slot + 1) + " silinip yeni oyun başlatılacak.\nEmin misin?");
             return;
         }
 
@@ -81,16 +85,43 @@ public class SlotMenu : MonoBehaviour
         StartGame();
     }
 
+    // Satırdaki "Sil" butonundan çağrılır
+    public void OnDeleteClicked(int slot)
+    {
+        AskConfirm(PendingAction.Delete, slot,
+            "Kayıt " + (slot + 1) + " kalıcı olarak silinecek.\nEmin misin?");
+    }
+
+    void AskConfirm(PendingAction action, int slot, string question)
+    {
+        pendingAction = action;
+        pendingSlot = slot;
+        confirmText.text = question;
+        confirmPanel.SetActive(true);
+    }
+
     public void ConfirmYes()
     {
         confirmPanel.SetActive(false);
-        SaveData.NewGame(pendingSlot);
-        StartGame();
+
+        switch (pendingAction)
+        {
+            case PendingAction.Overwrite:
+                SaveData.NewGame(pendingSlot);
+                StartGame();
+                break;
+            case PendingAction.Delete:
+                SaveData.DeleteSlot(pendingSlot);
+                foreach (SlotRow r in rows) r.Refresh(loadMode);   // Silinen yuva "Boş" görünsün
+                break;
+        }
+        pendingAction = PendingAction.None;
     }
 
     public void ConfirmNo()
     {
         confirmPanel.SetActive(false);
+        pendingAction = PendingAction.None;
         pendingSlot = -1;
     }
 

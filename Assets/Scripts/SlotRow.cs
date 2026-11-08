@@ -9,6 +9,7 @@ public class SlotRow : MonoBehaviour
     [Header("Bağlantılar (prefab içinde sürükle)")]
     public TMP_Text infoText;
     public Button button;
+    public Button deleteButton;      // Satırın sağındaki "Sil" butonu
 
     int slot;
     SlotMenu menu;
@@ -20,6 +21,8 @@ public class SlotRow : MonoBehaviour
         button.onClick.AddListener(() => menu.OnSlotClicked(slot));
         // "() => ..." bir "lambda": tıklanınca çalışacak küçük, isimsiz bir fonksiyon.
         // Her satır kendi yuva numarasını hatırlar.
+        if (deleteButton != null)
+            deleteButton.onClick.AddListener(() => menu.OnDeleteClicked(slot));
     }
 
     // loadMode: "Oyun Yükle" ekranındaysak boş yuvalar tıklanamaz
@@ -32,6 +35,7 @@ public class SlotRow : MonoBehaviour
         {
             infoText.text = title + "\n<size=75%>Boş</size>";
             button.interactable = !loadMode;
+            if (deleteButton != null) deleteButton.gameObject.SetActive(false);   // Boş yuva silinmez
         }
         else
         {
@@ -40,6 +44,7 @@ public class SlotRow : MonoBehaviour
                             data.completedRides + " yolculuk  ·  " +
                             data.lastPlayed + "</size>";
             button.interactable = true;
+            if (deleteButton != null) deleteButton.gameObject.SetActive(true);
         }
     }
 }
