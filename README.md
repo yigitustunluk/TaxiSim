@@ -33,9 +33,10 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 ## Features
 
 - **Arcade vehicle physics**: force-based controller on a Rigidbody with custom lateral grip instead of WheelColliders; acceleration falls off towards top speed like a real car.
-- **Procedural city**: grid of blocks, sidewalks, buildings and street lamps generated at runtime from a seed.
-- **Traffic AI**: cars navigate the road grid intersection by intersection, keep to the right lane, brake for obstacles using a `BoxCast` along their *intended* path (so they also see cars while turning), and stop at red lights behind the signal pole.
-- **Traffic lights**: signal state is *computed* from time and a per-intersection offset rather than stored, so the lamps, the traffic AI and the red-light check always agree. The player's violations are detected when entering an intersection and raised as an event.
+- **Procedural city on a road graph**: the city is a graph of intersections (nodes) and roads (edges), generated from a seed. Block sizes vary, two avenues per axis are wider than side streets, and ~30% of side streets are closed (checked with BFS so the city never splits or gets dead ends) and turned into plazas. Blocks facing avenues get high-rises, side streets get low buildings; some blocks become parks. Road markings: double yellow on avenues, dashed white on side streets, stop lines at signals.
+- **Shortest paths with Dijkstra**: trip time and the expected fare use the real shortest route on the road graph, since closed streets make grid distance wrong.
+- **Traffic AI**: cars walk the road graph intersection by intersection (never into closed streets), keep to the right lane, brake for obstacles using a `BoxCast` along their *intended* path (so they also see cars while turning), and stop at red lights behind the signal pole.
+- **Traffic lights** only at major intersections (decided by the city plan). Signal state is *computed* from time and a per-intersection offset rather than stored, so the lamps, the traffic AI and the red-light check always agree. The player's violations are detected when entering an intersection and raised as an event.
 - **Passenger loop**: state machine (`enum`) for pick-up / drop-off, time limit, tips and satisfaction.
 - **Day/night cycle**: animated sun, flat ambient and fog driven by time of day, headlights and street lamps that switch on at dusk, lit building windows.
 - **Vehicle visuals**: wheels roll without slipping (angle = distance / radius, radius measured from the mesh) and the front wheels steer; tail lights glow and brighten when braking, with a backward-facing spot light on the road.
@@ -65,7 +66,9 @@ Some problems I ran into and how they were solved:
 |---|---|
 | `TaxiController` | Player car physics, input, ground/sidewalk detection, crash event |
 | `CameraFollow` | Smooth chase camera |
-| `CityGenerator` | Procedural city, window textures, street lamps |
+| `RoadNetwork` | Road graph data, BFS connectivity check, Dijkstra shortest routes |
+| `CityLayout` | City plan: irregular road lines, avenues, closed streets, which intersections get lights |
+| `CityGenerator` | Builds the city from the plan: blocks, buildings, parks, plazas, road markings, lamps |
 | `PassengerManager` | Ride loop, taximeter, timer, tips, penalties |
 | `NavigationArrow` | Arrow above the taxi pointing to the current target |
 | `TrafficCar` / `TrafficSpawner` | Traffic AI and spawning |
