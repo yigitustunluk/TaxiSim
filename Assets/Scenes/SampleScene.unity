@@ -276,9 +276,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TrafficLightSystem
   city: {fileID: 157382670}
   baseMaterial: {fileID: 2100000, guid: c42a4d05b5713304ca50b479ce6b2484, type: 2}
-  greenTime: 8
-  yellowTime: 2
-  allRedTime: 1
+  taxi: {fileID: 538237883}
+  minViolationSpeed: 2
+  greenTime: 6
+  yellowTime: 1.5
+  allRedTime: 0.5
 --- !u!1 &225356673
 GameObject:
   m_ObjectHideFlags: 0
@@ -798,6 +800,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PassengerManager
   taxi: {fileID: 538237878}
   city: {fileID: 157382670}
+  lights: {fileID: 157382672}
   stopRadius: 5
   maxStopSpeedKmh: 5
   baseFare: 15
@@ -810,9 +813,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 53ad53a1a019d42439022e149dd6e295, type: 2}
   expectedSpeed: 10
   extraTime: 5
+  timePerIntersection: 3
   tipPercent: 0.3
   latePenalty: 0.3
   crashPenalty: 15
+  redLightPenalty: 30
   sidewalkPenalty: 25
 --- !u!4 &390591185
 Transform:

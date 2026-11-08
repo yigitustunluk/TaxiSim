@@ -11,6 +11,7 @@ public class PassengerManager : MonoBehaviour
     [Header("Bağlantılar (Inspector'dan sürükle)")]
     public TaxiController taxi;
     public CityGenerator city;
+    public TrafficLightSystem lights;
 
     [Header("Kurallar")]
     public float stopRadius = 5f;          // İşaretin yarıçapı (metre)
@@ -23,11 +24,13 @@ public class PassengerManager : MonoBehaviour
     public PassengerType[] passengerTypes;   // Boş bırakılırsa herkes normal yolcu olur
 
     [Header("Süre ve Bahşiş")]
-    public float expectedSpeed = 12f;      // Süre hesabı için beklenen ortalama hız (m/s)
+    public float expectedSpeed = 10f;      // Süre hesabı için beklenen ortalama hız (m/s)
     public float extraTime = 5f;           // Süreye eklenen ek pay (saniye)
+    public float timePerIntersection = 3f; // Yoldaki her kavşak için ek süre (kırmızı ışık payı)
     public float tipPercent = 0.3f;        // Tam memnuniyette bahşiş: ücretin %30'u
     public float latePenalty = 0.3f;       // Geç kalınca ücretten kesilen oran: %30
     public float crashPenalty = 15f;       // Her çarpışmada memnuniyet kaybı (puan)
+    public float redLightPenalty = 30f;    // Kırmızıda geçince memnuniyet kaybı (puan)
     public float sidewalkPenalty = 25f;    // Kaldırımda geçen her saniye memnuniyet kaybı (puan)
 
     // Oyuncu şu an ne yapıyor? Bu tür "durum" listelerine enum denir.
@@ -71,6 +74,7 @@ public class PassengerManager : MonoBehaviour
     void Start()
     {
         taxi.OnCrash += HandleCrash;   // Taksinin çarpışma duyurusuna abone ol
+        if (lights != null) lights.OnRedLightRun += HandleRedLight;
         totalMoney = SaveData.Money;              // Kayıttan yükle
         completedRides = SaveData.CompletedRides;
         NewPickup();
@@ -79,6 +83,7 @@ public class PassengerManager : MonoBehaviour
     void OnDestroy()
     {
         if (taxi != null) taxi.OnCrash -= HandleCrash;  // Aboneliği bırak (iyi alışkanlık)
+        if (lights != null) lights.OnRedLightRun -= HandleRedLight;
     }
 
     void Update()
@@ -139,16 +144,21 @@ public class PassengerManager : MonoBehaviour
         float manhattan = Mathf.Abs(targetPos.x - pickupPos.x) + Mathf.Abs(targetPos.z - pickupPos.z);
         estimatedFare = (baseFare + manhattan * farePerMeter) * FareMult;
 
-        // Süre hesabı için kuş uçuşu mesafe (bu değerleri sen ayarladın, bozmuyoruz)
-        float distance = Vector3.Distance(pickupPos, targetPos);
-
         // Süre: mesafeyi beklenen hızla gitmek için gereken zaman + ek pay
         // Hız sınırı olan yolcuda beklenen hızı sınıra göre düşür. Yoksa sınıra uyan oyuncu
         // hiçbir zaman yetişemez. Virajlar ve trafik için sınırın %60'ı ortalama kabul edilir.
         float speed = expectedSpeed;
         if (SpeedLimitKmh > 0f) speed = Mathf.Min(speed, SpeedLimitKmh / 3.6f * 0.6f);
 
-        timeLeft = (distance / speed + extraTime) * TimeMult;
+        // Yolda kaç kavşaktan geçilecek? En kısa yolda her blok boyu bir kavşak demek.
+        // Trafik ışıkları varsa her kavşak için ortalama bekleme payı ekle.
+        float cell = city.blockSize + city.roadWidth;
+        int intersections = Mathf.RoundToInt(manhattan / cell);
+        float lightAllowance = lights != null ? intersections * timePerIntersection : 0f;
+
+        // Süreyi kuş uçuşu mesafeye göre değil, GERÇEK yol uzunluğuna (Manhattan) göre hesapla.
+        // Kuş uçuşu, çapraz yolculuklarda gidilecek yolu %40'a kadar eksik gösteriyordu.
+        timeLeft = (manhattan / speed + extraTime + lightAllowance) * TimeMult;
         totalTime = timeLeft;
         satisfaction = 100f;
 
@@ -230,6 +240,19 @@ public class PassengerManager : MonoBehaviour
         Vector3 p = taxi.transform.position;
         p.y = 0f;
         return p;
+    }
+
+    // Oyuncu kırmızıda geçtiğinde TrafficLightSystem tarafından çağrılır
+    void HandleRedLight()
+    {
+        if (state != State.CarryingPassenger)
+        {
+            ShowMessage("Kırmızı ışıkta geçtin!");   // Boşken sadece uyarı
+            return;
+        }
+        float loss = redLightPenalty * PenaltyMult;
+        satisfaction = Mathf.Max(0f, satisfaction - loss);
+        ShowMessage("Kırmızı ışıkta geçtin! Memnuniyet -" + loss.ToString("0"));
     }
 
     // Taksi bir şeye çarptığında TaxiController tarafından çağrılır

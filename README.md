@@ -16,6 +16,7 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 - Arrive on time for a **tip**. Crashes and driving on the sidewalk lower passenger satisfaction, and with it your tip.
 - Arrive late and the passenger disputes the meter: they pay at most the fare of the shortest route, minus 30%. Taking the long way never pays.
 - **Passenger types** change how you need to drive: *Hurried* passengers tip more the earlier you arrive, *Careful* ones have a speed limit and double penalties, and rare *VIP* passengers pay 2.5× but expect a smooth ride.
+- **Traffic lights** at every intersection. Running a red light upsets your passenger; waiting costs time. Your call.
 - Progress is **auto-saved** after every ride in one of **3 save slots**. Spend your earnings in the **Garage** (pause menu) to upgrade the engine, brakes and tyres; upgrades apply instantly.
 
 ## Controls
@@ -33,7 +34,8 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 
 - **Arcade vehicle physics**: force-based controller on a Rigidbody with custom lateral grip instead of WheelColliders; acceleration falls off towards top speed like a real car.
 - **Procedural city**: grid of blocks, sidewalks, buildings and street lamps generated at runtime from a seed.
-- **Traffic AI**: cars navigate the road grid intersection by intersection, keep to the right lane, and brake for obstacles using a `BoxCast` along their *intended* path, so they also see cars while turning.
+- **Traffic AI**: cars navigate the road grid intersection by intersection, keep to the right lane, brake for obstacles using a `BoxCast` along their *intended* path (so they also see cars while turning), and stop at red lights behind the signal pole.
+- **Traffic lights**: signal state is *computed* from time and a per-intersection offset rather than stored, so the lamps, the traffic AI and the red-light check always agree. The player's violations are detected when entering an intersection and raised as an event.
 - **Passenger loop**: state machine (`enum`) for pick-up / drop-off, time limit, tips and satisfaction.
 - **Day/night cycle**: animated sun, flat ambient and fog driven by time of day, headlights and street lamps that switch on at dusk, lit building windows.
 - **Vehicle visuals**: wheels roll without slipping (angle = distance / radius, radius measured from the mesh) and the front wheels steer; tail lights glow and brighten when braking, with a backward-facing spot light on the road.
@@ -54,6 +56,7 @@ Some problems I ran into and how they were solved:
 - **Camera far behind the car**: `TransformPoint` applied the car's non-uniform scale to the camera offset. Replaced with `position + rotation * offset`.
 - **Traffic pushed the player like a bulldozer**: kinematic bodies ignore collisions. Traffic cars now stop for a moment on contact.
 - **Decoupling**: the taxi raises an `OnCrash` event; the passenger system subscribes to it. The taxi doesn't know who listens.
+- **Unfair trip timers**: the time limit was first computed from straight-line distance, but on a grid the real route can be ~40% longer, so diagonal trips were much harder. It became visible only after acceleration was toned down and traffic lights were added. Trip time is now *route length / expected speed* (capped by the passenger's speed limit) + a per-intersection allowance for lights.
 - **Fog and glowing windows missing in the build**: Unity stripped shader variants that were only enabled from code at runtime. Fixed by enabling fog in the scene's lighting settings and creating city materials from a template material with emission enabled, instead of `Shader.Find`.
 
 ## Project structure
@@ -66,6 +69,7 @@ Some problems I ran into and how they were solved:
 | `PassengerManager` | Ride loop, taximeter, timer, tips, penalties |
 | `NavigationArrow` | Arrow above the taxi pointing to the current target |
 | `TrafficCar` / `TrafficSpawner` | Traffic AI and spawning |
+| `TrafficLightSystem` | Signal timing, signal poles, red-light detection |
 | `GameHUD` | On-screen UI |
 | `DayNightCycle` | Sun, ambient, fog, sky, headlights, lamps, windows |
 | `EngineSound` | Engine and horn audio |

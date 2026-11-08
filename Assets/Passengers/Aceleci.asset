@@ -17,7 +17,7 @@ MonoBehaviour:
   pickupMessage: "Acelem var, h\u0131zl\u0131 ol!"
   spawnWeight: 25
   fareMultiplier: 1
-  timeMultiplier: 0.7
+  timeMultiplier: 0.8
   tipPercent: 0.6
   penaltyMultiplier: 1
   speedLimitKmh: 0

@@ -18,10 +18,19 @@ public class TrafficLightSystem : MonoBehaviour
     [Tooltip("Emission'ı açık şablon malzeme (SehirMalzemesi)")]
     public Material baseMaterial;
 
+    [Header("Oyuncu")]
+    public Transform taxi;                    // Kırmızıda geçip geçmediğini izlemek için
+    public float minViolationSpeed = 2f;      // Bundan yavaş girişler sayılmaz (m/s)
+
+    // OLAY: Oyuncu kırmızıda kavşağa girdi. PassengerManager buna abone olup ceza verir.
+    // (Taksinin OnCrash olayıyla aynı yöntem.)
+    public System.Action OnRedLightRun;
+
     [Header("Süreler (saniye)")]
-    public float greenTime = 8f;
-    public float yellowTime = 2f;
-    public float allRedTime = 1f;      // İki yön de kırmızı: kavşak boşalsın diye
+    // Gerçek hayattan kısa: oyunda 10 saniyeden uzun kırmızı beklemek sıkıcı olur
+    public float greenTime = 6f;
+    public float yellowTime = 1.5f;
+    public float allRedTime = 0.5f;    // İki yön de kırmızı: kavşak boşalsın diye
 
     // Bir yaklaşım yönündeki ışık başlığı ve üç lambası
     class SignalHead
@@ -37,6 +46,8 @@ public class TrafficLightSystem : MonoBehaviour
     float cell;
     int minIndex, maxIndex;
     Material offMat, redMat, yellowMat, greenMat, poleMat;
+    Vector2Int? playerIntersection;           // Oyuncunun şu an içinde olduğu kavşak (yoksa null)
+    Vector3 lastTaxiPos;
 
     void Start()
     {
@@ -70,10 +81,14 @@ public class TrafficLightSystem : MonoBehaviour
                 }
             }
         }
+
+        if (taxi != null) lastTaxiPos = taxi.position;
     }
 
     void Update()
     {
+        CheckPlayer();
+
         // Rengi değişen başlıkların lambalarını güncelle
         foreach (SignalHead h in heads)
         {
@@ -108,6 +123,35 @@ public class TrafficLightSystem : MonoBehaviour
         if (p < greenTime) return SignalColor.Green;
         if (p < greenTime + yellowTime) return SignalColor.Yellow;
         return SignalColor.Red;
+    }
+
+    // Oyuncu bir kavşağa GİRDİĞİ anı yakalar ve o anda ışık kırmızı mı diye bakar.
+    void CheckPlayer()
+    {
+        if (taxi == null || Time.deltaTime <= 0f) return;   // Oyun duraklatılmışsa bakma
+
+        Vector3 pos = taxi.position;
+        Vector3 delta = pos - lastTaxiPos;                   // Bu karede gidilen yol (yönü de verir)
+        lastTaxiPos = pos;
+
+        // En yakın kavşak ve taksinin onun içinde olup olmadığı
+        Vector2Int node = new Vector2Int(Mathf.RoundToInt(pos.x / cell), Mathf.RoundToInt(pos.z / cell));
+        float half = city.roadWidth / 2f;
+        bool inside = IsInside(node)
+                      && Mathf.Abs(pos.x - node.x * cell) < half
+                      && Mathf.Abs(pos.z - node.y * cell) < half;
+
+        if (!inside) { playerIntersection = null; return; }
+        if (playerIntersection == node) return;              // Zaten içerideydik
+        playerIntersection = node;                           // Tam şu an girdik
+
+        float speed = delta.magnitude / Time.deltaTime;
+        if (speed < minViolationSpeed) return;
+
+        // Hangi yönden girdik? Yatay hareket büyükse doğu-batı, değilse kuzey-güney
+        bool northSouth = Mathf.Abs(delta.z) > Mathf.Abs(delta.x);
+        if (GetSignal(node, northSouth) == SignalColor.Red)
+            OnRedLightRun?.Invoke();
     }
 
     float CycleLength()
