@@ -56,7 +56,7 @@ Some problems I ran into and how they were solved:
 - **Camera far behind the car**: `TransformPoint` applied the car's non-uniform scale to the camera offset. Replaced with `position + rotation * offset`.
 - **Traffic pushed the player like a bulldozer**: kinematic bodies ignore collisions. Traffic cars now stop for a moment on contact.
 - **Decoupling**: the taxi raises an `OnCrash` event; the passenger system subscribes to it. The taxi doesn't know who listens.
-- **Unfair trip timers**: the time limit was first computed from straight-line distance, but on a grid the real route can be ~40% longer, so diagonal trips were much harder. It became visible only after acceleration was toned down and traffic lights were added. Trip time is now *route length / expected speed* (capped by the passenger's speed limit) + a per-intersection allowance for lights.
+- **Unfair trip timers**: the time limit was first computed from straight-line distance, but on a grid the real route can be ~40% longer, so diagonal trips were much harder. It became visible only after acceleration was toned down and traffic lights were added. Trip time is now *route length / expected speed* (capped by the passenger's speed limit) + a per-intersection allowance for lights. Timers are balanced for the **starting** taxi; upgrades make them comfortable, they are a reward rather than a requirement.
 - **Fog and glowing windows missing in the build**: Unity stripped shader variants that were only enabled from code at runtime. Fixed by enabling fog in the scene's lighting settings and creating city materials from a template material with emission enabled, instead of `Shader.Find`.
 
 ## Project structure

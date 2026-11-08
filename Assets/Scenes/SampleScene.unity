@@ -811,7 +811,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4ee925e45e62cf14ebffaa5af282e230, type: 2}
   - {fileID: 11400000, guid: b4ace477116d4ec4facc6669cbd4128e, type: 2}
   - {fileID: 11400000, guid: 53ad53a1a019d42439022e149dd6e295, type: 2}
-  expectedSpeed: 10
+  expectedSpeed: 8.5
   extraTime: 5
   timePerIntersection: 3
   tipPercent: 0.3
