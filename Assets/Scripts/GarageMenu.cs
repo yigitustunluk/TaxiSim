@@ -2,12 +2,11 @@ using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
 
-// Ana menüdeki Garaj ekranı. MainMenu sahnesindeki Canvas'a eklenir.
-// Ana panel ile garaj paneli arasında geçiş yapar, yükseltme satırlarını oluşturur.
+// Garaj ekranı. Oyun sahnesindeki Canvas'a eklenir, duraklatma menüsünden açılır.
 public class GarageMenu : MonoBehaviour
 {
     [Header("Paneller")]
-    public GameObject mainPanel;
+    public GameObject mainPanel;         // Garajdan "Geri" ile dönülecek panel (duraklatma paneli)
     public GameObject garagePanel;
 
     [Header("Garaj İçeriği")]
@@ -15,6 +14,9 @@ public class GarageMenu : MonoBehaviour
     public Transform rowContainer;       // Satırların dizileceği obje (Vertical Layout Group)
     public UpgradeRow rowPrefab;
     public UpgradeDefinition[] upgrades;
+
+    [Header("Taksi")]
+    public TaxiUpgrades taxiUpgrades;    // Satın alınca yükseltmeyi anında uygulamak için
 
     List<UpgradeRow> rows = new List<UpgradeRow>();
 
@@ -32,7 +34,7 @@ public class GarageMenu : MonoBehaviour
             }
         }
 
-        CloseGarage();   // Menü her zaman ana panelle açılsın
+        garagePanel.SetActive(false);    // Başta kapalı (duraklatma paneline dokunmuyoruz)
     }
 
     public void OpenGarage()
@@ -48,10 +50,12 @@ public class GarageMenu : MonoBehaviour
         mainPanel.SetActive(true);
     }
 
+    // Satın almadan sonra (ve garaj açılınca) çağrılır
     public void RefreshAll()
     {
         if (moneyText != null)
             moneyText.text = "Kasa: " + SaveData.Money.ToString("0") + " TL";
         foreach (UpgradeRow row in rows) row.Refresh();
+        if (taxiUpgrades != null) taxiUpgrades.Apply();
     }
 }

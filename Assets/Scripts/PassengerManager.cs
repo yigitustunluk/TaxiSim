@@ -55,7 +55,7 @@ public class PassengerManager : MonoBehaviour
     public float MeterDistance => meterDistance;
     public float TimeLeft => timeLeft;
     public float Satisfaction => satisfaction;
-    public float TotalMoney => totalMoney;
+    public float TotalMoney => SaveData.Money;   // Garajda harcanınca da güncel kalsın
     public int CompletedRides => completedRides;
     public string Message => message;
     public bool HasMessage => messageTimer > 0f;

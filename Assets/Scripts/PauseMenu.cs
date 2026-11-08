@@ -15,6 +15,7 @@ public class PauseMenu : MonoBehaviour
     public GameObject pausePanel;     // Açılıp kapanacak panel
     public TMP_Text infoText;         // Paneldeki başlık ve kontroller yazısı
     public string menuSceneName = "MainMenu";
+    public GameObject[] extraPanels;  // Oyun devam edince kapanacak diğer paneller (örneğin garaj)
 
     public bool IsPaused { get; private set; }
 
@@ -72,6 +73,11 @@ public class PauseMenu : MonoBehaviour
         Time.timeScale = paused ? 0f : 1f;
         AudioListener.pause = paused;           // Motor sesi de dursun
         if (pausePanel != null) pausePanel.SetActive(paused);
+
+        // Devam ederken (ESC'ye garajdayken basılsa bile) bütün menüler kapansın
+        if (!paused && extraPanels != null)
+            foreach (GameObject p in extraPanels)
+                if (p != null) p.SetActive(false);
     }
 
     // Sahne kapanırken zamanı mutlaka geri aç. Yoksa bir sonraki sahne donuk başlar.
