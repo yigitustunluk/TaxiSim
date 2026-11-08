@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // Oyunun ana döngüsü:
 // 1) Yolda yeşil bir işaret çıkar: yolcu orada bekliyor.
@@ -11,6 +12,7 @@ public class PassengerManager : MonoBehaviour
     [Header("Bağlantılar (Inspector'dan sürükle)")]
     public TaxiController taxi;
     public CityGenerator city;
+    public CityLayout layout;                // Yolcu noktaları ve rota hesabı için yol ağı
     public TrafficLightSystem lights;
 
     [Header("Kurallar")]
@@ -24,7 +26,7 @@ public class PassengerManager : MonoBehaviour
     public PassengerType[] passengerTypes;   // Boş bırakılırsa herkes normal yolcu olur
 
     [Header("Süre ve Bahşiş")]
-    public float expectedSpeed = 8.5f;     // Süre hesabı için beklenen ortalama hız (m/s)
+    public float expectedSpeed = 10f;      // Süre hesabı için beklenen ortalama hız (m/s)
     public float extraTime = 5f;           // Süreye eklenen ek pay (saniye)
     public float timePerIntersection = 3f; // Yoldaki her kavşak için ek süre (kırmızı ışık payı)
     public float tipPercent = 0.3f;        // Tam memnuniyette bahşiş: ücretin %30'u
@@ -57,6 +59,7 @@ public class PassengerManager : MonoBehaviour
     float messageTimer;
 
     System.Random rng = new System.Random(); // Şehirden bağımsız rastgele sayı üretici
+    RoadPoint pickupRoadPoint, targetRoadPoint;  // İşaretlerin yol ağındaki yerleri (rota hesabı için)
 
     // Diğer script'lerin (örneğin yön oku) okuyabilmesi için dışarıya açılan bilgiler.
     // Sadece okunabilirler, dışarıdan değiştirilemezler.
@@ -131,7 +134,7 @@ public class PassengerManager : MonoBehaviour
     {
         state = State.GoingToPickup;
         currentType = ChooseType();
-        targetPos = RandomRoadPoint(taxi.transform.position, 60f);
+        targetPos = RandomRoadPoint(taxi.transform.position, 60f, out pickupRoadPoint);
         PlaceMarker(targetPos, Color.green);
     }
 
@@ -139,7 +142,7 @@ public class PassengerManager : MonoBehaviour
     {
         Vector3 pickupPos = targetPos;
         state = State.CarryingPassenger;
-        targetPos = RandomRoadPoint(pickupPos, 80f);
+        targetPos = RandomRoadPoint(pickupPos, 80f, out targetRoadPoint);
 
         // Taksimetreyi sıfırla: açılış ücretiyle başlar
         meterDistance = 0f;
@@ -147,10 +150,11 @@ public class PassengerManager : MonoBehaviour
         lastTaxiPos = FlatTaxiPosition();
         currentFare = baseFare * FareMult;
 
-        // Tahmini ücret: şehir ızgara olduğu için en kısa yol "Manhattan mesafesi"dir
-        // (yatay fark + dikey fark). Kuş uçuşu ile gidilemez, binalar var.
-        float manhattan = Mathf.Abs(targetPos.x - pickupPos.x) + Mathf.Abs(targetPos.z - pickupPos.z);
-        estimatedFare = (baseFare + manhattan * farePerMeter) * FareMult;
+        // En kısa rota: yol ağı üzerinde Dijkstra ile. Kapalı sokaklar ve düzensiz bloklar
+        // olduğu için "Manhattan mesafesi" artık doğru değil.
+        Route route = layout.Network.FindRoute(pickupRoadPoint, targetRoadPoint);
+        float routeLength = route != null ? route.length : Vector3.Distance(pickupPos, targetPos);
+        estimatedFare = (baseFare + routeLength * farePerMeter) * FareMult;
 
         // Süre: mesafeyi beklenen hızla gitmek için gereken zaman + ek pay
         // Hız sınırı olan yolcuda beklenen hızı sınıra göre düşür. Yoksa sınıra uyan oyuncu
@@ -158,15 +162,13 @@ public class PassengerManager : MonoBehaviour
         float speed = expectedSpeed;
         if (SpeedLimitKmh > 0f) speed = Mathf.Min(speed, SpeedLimitKmh / 3.6f * 0.6f);
 
-        // Yolda kaç kavşaktan geçilecek? En kısa yolda her blok boyu bir kavşak demek.
-        // Trafik ışıkları varsa her kavşak için ortalama bekleme payı ekle.
-        float cell = city.blockSize + city.roadWidth;
-        int intersections = Mathf.RoundToInt(manhattan / cell);
-        float lightAllowance = lights != null ? intersections * timePerIntersection : 0f;
+        // Rotadaki her trafik ışıklı kavşak için bekleme payı ekle
+        int lightCount = 0;
+        if (route != null && lights != null && lights.isActiveAndEnabled)
+            foreach (RoadNode node in route.nodes) if (node.hasTrafficLight) lightCount++;
+        float lightAllowance = lightCount * timePerIntersection;
 
-        // Süreyi kuş uçuşu mesafeye göre değil, GERÇEK yol uzunluğuna (Manhattan) göre hesapla.
-        // Kuş uçuşu, çapraz yolculuklarda gidilecek yolu %40'a kadar eksik gösteriyordu.
-        timeLeft = (manhattan / speed + extraTime + lightAllowance) * TimeMult;
+        timeLeft = (routeLength / speed + extraTime + lightAllowance) * TimeMult;
         totalTime = timeLeft;
         satisfaction = 100f;
 
@@ -280,28 +282,28 @@ public class PassengerManager : MonoBehaviour
         return Vector3.Distance(a, b);
     }
 
-    // Şehirdeki yollardan rastgele bir nokta seçer (kaldırım kenarına yakın)
-    Vector3 RandomRoadPoint(Vector3 from, float minDistance)
+    // Yol ağından rastgele bir yol seçip üzerinde, kaldırıma yakın bir nokta döndürür.
+    // "rp", noktanın yol ağındaki yeri: rota hesabında kullanılır.
+    Vector3 RandomRoadPoint(Vector3 from, float minDistance, out RoadPoint rp)
     {
-        float cell = city.blockSize + city.roadWidth;
-        int half = city.blocksPerSide / 2;
+        List<RoadEdge> edges = layout.Network.edges;
+        Vector3 flatFrom = new Vector3(from.x, 0f, from.z);
         Vector3 p = Vector3.zero;
+        rp = new RoadPoint();
 
         for (int i = 0; i < 50; i++)
         {
-            int roadIndex = rng.Next(-half, city.blocksPerSide - half + 1);  // Hangi yol çizgisi
-            int blockIndex = rng.Next(-half, city.blocksPerSide - half);     // Yolun hangi bölümü
-            float roadCoord = roadIndex * cell;
-            float alongCoord = blockIndex * cell + cell / 2f;                // Kavşak değil, blok ortası
-            float side = rng.NextDouble() < 0.5 ? -1f : 1f;                  // Yolun sağı mı solu mu
-            float curbOffset = side * (city.roadWidth / 2f - 2f);
+            RoadEdge e = edges[rng.Next(edges.Count)];
+            if (e.Length < 25f) continue;                 // Çok kısa yollarda kavşağa fazla yakın olur
 
-            if (rng.NextDouble() < 0.5)
-                p = new Vector3(roadCoord + curbOffset, 0f, alongCoord);     // Kuzey-güney yolu
-            else
-                p = new Vector3(alongCoord, 0f, roadCoord + curbOffset);     // Doğu-batı yolu
+            rp.edge = e;
+            rp.t = 0.3f + (float)rng.NextDouble() * 0.4f; // Yolun orta kısmı, kavşaklardan uzak
 
-            Vector3 flatFrom = new Vector3(from.x, 0f, from.z);
+            // Yolun sağına ya da soluna, kaldırımın 2 m yakınına
+            Vector3 dir = (e.b.position - e.a.position).normalized;
+            Vector3 side = Vector3.Cross(Vector3.up, dir) * (rng.NextDouble() < 0.5 ? -1f : 1f);
+            p = rp.Position + side * (e.width / 2f - 2f);
+
             if (Vector3.Distance(flatFrom, p) >= minDistance) return p;
         }
         return p;

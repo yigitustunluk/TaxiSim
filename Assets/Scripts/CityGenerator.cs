@@ -1,11 +1,18 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-// Oyun başladığında ızgara (grid) şeklinde basit bir şehir oluşturur:
-// asfalt zemin, kaldırımlı bloklar ve her blokta 4 bina.
-// Yollar x=0 ve z=0 çizgilerinden geçer, yani taksi (0,0,0)'da bir kavşakta başlar.
+// Oyun başladığında şehrin GÖRÜNTÜSÜNÜ oluşturur.
+// - "Layout" alanı doluysa: CityLayout'un ürettiği yol ağına göre düzensiz bir şehir kurar
+//   (farklı boyda bloklar, parklar, meydanlar, yol çizgileri).
+// - Boşsa: eski, düzgün ızgara şehri kurar.
 public class CityGenerator : MonoBehaviour
 {
+    [Header("Yeni Şehir Planı")]
+    public CityLayout layout;                 // Doluysa şehir bu plana göre kurulur
+    public Transform taxi;                    // Taksiyi oyun başında bir kavşağa koymak için
+    [Range(0f, 1f)] public float parkRatio = 0.12f;   // Blokların ne kadarı park olsun
+    public float lotSize = 16f;               // Bir bina parselinin yaklaşık boyu
+
     [Header("Şehir Boyutu")]
     public int blocksPerSide = 6;      // Her kenarda kaç blok olacak
     public float blockSize = 30f;      // Bir bloğun (kaldırım dahil) genişliği
@@ -38,7 +45,8 @@ public class CityGenerator : MonoBehaviour
 
     void Start()
     {
-        Generate();
+        if (layout != null && layout.Network != null) GenerateFromLayout();
+        else Generate();
     }
 
     void Generate()
@@ -93,6 +101,234 @@ public class CityGenerator : MonoBehaviour
                 }
             }
         }
+    }
+
+    // =====================================================================
+    //  YENİ ŞEHİR: CityLayout'un planına göre
+    // =====================================================================
+
+    Material sidewalkMat, grassMat, trunkMat, leavesMat, lineWhiteMat, lineYellowMat, poleMat;
+
+    void GenerateFromLayout()
+    {
+        Random.InitState(seed);
+        CreateWindowTextures();
+
+        Material asphalt = MakeMaterial(new Color(0.18f, 0.18f, 0.20f));
+        sidewalkMat = MakeMaterial(new Color(0.60f, 0.60f, 0.60f));
+        grassMat = MakeMaterial(new Color(0.30f, 0.52f, 0.25f));
+        trunkMat = MakeMaterial(new Color(0.35f, 0.24f, 0.15f));
+        leavesMat = MakeMaterial(new Color(0.20f, 0.42f, 0.18f));
+        lineWhiteMat = MakeMaterial(new Color(0.92f, 0.92f, 0.90f));
+        lineYellowMat = MakeMaterial(new Color(0.95f, 0.75f, 0.10f));
+        poleMat = MakeMaterial(new Color(0.15f, 0.15f, 0.16f));
+        lampHeadMaterial = MakeMaterial(Color.white);
+        lampHeadMaterial.EnableKeyword("_EMISSION");
+
+        float[] xs = layout.xLines, zs = layout.zLines, xw = layout.xWidths, zw = layout.zWidths;
+        int n = xs.Length;
+
+        // Asfalt: bütün şehrin altında, kenarlarda 20 m pay
+        float minX = xs[0] - xw[0] / 2f - 20f, maxX = xs[n - 1] + xw[n - 1] / 2f + 20f;
+        float minZ = zs[0] - zw[0] / 2f - 20f, maxZ = zs[n - 1] + zw[n - 1] / 2f + 20f;
+        CreateBox("Asfalt", new Vector3((minX + maxX) / 2f, -0.5f, (minZ + maxZ) / 2f),
+                  new Vector3(maxX - minX, 1f, maxZ - minZ), asphalt);
+
+        // 1) Kapatılmış yolları bul: plana göre yol olması gereken ama ağda olmayan yerler.
+        //    Yerlerine meydan koyacağız. Bitişik bloklar da daha sık park olacak.
+        HashSet<Vector2Int> nearClosed = new HashSet<Vector2Int>();
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                // Doğu-batı parçası: (i,j) → (i+1,j)
+                if (i + 1 < n && layout.Network.FindEdge(layout.GetNode(i, j), layout.GetNode(i + 1, j)) == null)
+                {
+                    CreatePlaza(new Rect(xs[i] + xw[i] / 2f, zs[j] - zw[j] / 2f,
+                                         (xs[i + 1] - xw[i + 1] / 2f) - (xs[i] + xw[i] / 2f), zw[j]));
+                    nearClosed.Add(new Vector2Int(i, j - 1));
+                    nearClosed.Add(new Vector2Int(i, j));
+                }
+                // Kuzey-güney parçası: (i,j) → (i,j+1)
+                if (j + 1 < n && layout.Network.FindEdge(layout.GetNode(i, j), layout.GetNode(i, j + 1)) == null)
+                {
+                    CreatePlaza(new Rect(xs[i] - xw[i] / 2f, zs[j] + zw[j] / 2f,
+                                         xw[i], (zs[j + 1] - zw[j + 1] / 2f) - (zs[j] + zw[j] / 2f)));
+                    nearClosed.Add(new Vector2Int(i - 1, j));
+                    nearClosed.Add(new Vector2Int(i, j));
+                }
+            }
+        }
+
+        // 2) Bloklar: dört yol çizgisinin arasında kalan her dikdörtgen
+        for (int i = 0; i < n - 1; i++)
+        {
+            for (int j = 0; j < n - 1; j++)
+            {
+                Rect r = new Rect(xs[i] + xw[i] / 2f, zs[j] + zw[j] / 2f, 0f, 0f);
+                r.xMax = xs[i + 1] - xw[i + 1] / 2f;
+                r.yMax = zs[j + 1] - zw[j + 1] / 2f;
+
+                GameObject curb = CreateBox("Kaldirim", new Vector3(r.center.x, 0.1f, r.center.y),
+                                            new Vector3(r.width, 0.2f, r.height), sidewalkMat);
+                curb.AddComponent<Sidewalk>();
+
+                bool touchesMain = layout.xMain[i] || layout.xMain[i + 1] || layout.zMain[j] || layout.zMain[j + 1];
+                float parkChance = nearClosed.Contains(new Vector2Int(i, j)) ? 0.35f : parkRatio;
+
+                if (Random.value < parkChance) CreatePark(r);
+                else CreateBuildings(r, touchesMain);
+
+                CreateLamp(new Vector3(r.xMin + 1f, 0.2f, r.yMin + 1f), poleMat);
+            }
+        }
+
+        // 3) Yol çizgileri
+        foreach (RoadEdge e in layout.Network.edges) CreateRoadLines(e);
+
+        // 4) Taksiyi şehrin ortasına en yakın kavşağa koy
+        PlaceTaxi();
+    }
+
+    // Bloğu parsellere böl ve her parsele bir bina koy.
+    // Ana caddeye bakan bloklarda yüksek binalar, ara sokaklarda alçak evler.
+    // Büyük bloklarda ortadaki parseller boş kalır: avlu.
+    void CreateBuildings(Rect r, bool touchesMain)
+    {
+        int nx = Mathf.Max(1, Mathf.RoundToInt(r.width / lotSize));
+        int nz = Mathf.Max(1, Mathf.RoundToInt(r.height / lotSize));
+        float lotW = r.width / nx, lotD = r.height / nz;
+        float edgeGap = 1.5f;                       // Kaldırımda yürüme payı
+
+        for (int a = 0; a < nx; a++)
+        {
+            for (int b = 0; b < nz; b++)
+            {
+                bool interior = a > 0 && a < nx - 1 && b > 0 && b < nz - 1;
+                if (interior) continue;              // Avlu
+
+                float w = lotW - 2f, d = lotD - 2f;  // Binalar arası 2 m boşluk
+                if (w < 4f || d < 4f) continue;
+
+                float h = touchesMain ? Random.Range(14f, 45f) : Random.Range(5f, 14f);
+                if (Random.value < 0.15f) h *= 0.5f;    // Ara sıra alçak bir bina, siluet düz olmasın
+
+                Vector3 pos = new Vector3(r.xMin + lotW * (a + 0.5f), 0.2f + h / 2f, r.yMin + lotD * (b + 0.5f));
+                // Kenar parsellerdeki binaları kaldırımdan biraz içeri çek
+                pos.x = Mathf.Clamp(pos.x, r.xMin + edgeGap + w / 2f, r.xMax - edgeGap - w / 2f);
+                pos.z = Mathf.Clamp(pos.z, r.yMin + edgeGap + d / 2f, r.yMax - edgeGap - d / 2f);
+
+                Color c = Color.HSVToRGB(Random.Range(0f, 1f), 0.15f, Random.Range(0.55f, 0.85f));
+                CreateBox("Bina", pos, new Vector3(w, h, d), MakeBuildingMaterial(c, Mathf.Max(w, d), h));
+
+                // Yüksek binaların bir kısmının tepesine daha dar bir kat: basamaklı siluet
+                if (h > 25f && Random.value < 0.4f)
+                {
+                    float h2 = Random.Range(4f, 10f);
+                    Vector3 top = new Vector3(pos.x, 0.2f + h + h2 / 2f, pos.z);
+                    CreateBox("BinaUst", top, new Vector3(w * 0.6f, h2, d * 0.6f),
+                              MakeBuildingMaterial(c, w * 0.6f, h2));
+                }
+            }
+        }
+    }
+
+    // Park: kaldırım halkası içinde çim ve rastgele ağaçlar
+    void CreatePark(Rect r)
+    {
+        Rect g = new Rect(r.xMin + 2f, r.yMin + 2f, r.width - 4f, r.height - 4f);
+        GameObject grass = CreateBox("Cim", new Vector3(g.center.x, 0.22f, g.center.y),
+                                     new Vector3(g.width, 0.05f, g.height), grassMat);
+        grass.AddComponent<Sidewalk>();   // Parkta sürmek de kaldırımda sürmek gibi cezalı
+
+        int trees = Mathf.Max(2, Mathf.RoundToInt(g.width * g.height / 120f));
+        for (int t = 0; t < trees; t++)
+            CreateTree(new Vector3(Random.Range(g.xMin + 2f, g.xMax - 2f), 0.25f, Random.Range(g.yMin + 2f, g.yMax - 2f)));
+    }
+
+    // Meydan: kapatılmış yolun yeri. Kaldırımla kaplı, birkaç ağaç.
+    void CreatePlaza(Rect r)
+    {
+        GameObject plaza = CreateBox("Meydan", new Vector3(r.center.x, 0.1f, r.center.y),
+                                     new Vector3(r.width, 0.2f, r.height), sidewalkMat);
+        plaza.AddComponent<Sidewalk>();
+        if (r.width > 6f && r.height > 6f)
+        {
+            CreateTree(new Vector3(r.center.x - r.width * 0.25f, 0.2f, r.center.y - r.height * 0.25f));
+            CreateTree(new Vector3(r.center.x + r.width * 0.25f, 0.2f, r.center.y + r.height * 0.25f));
+        }
+    }
+
+    void CreateTree(Vector3 basePos)
+    {
+        float h = Random.Range(2.5f, 4f);
+        CreateBox("Govde", basePos + Vector3.up * (h / 2f), new Vector3(0.35f, h, 0.35f), trunkMat);
+
+        GameObject crown = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        crown.name = "Yaprak";
+        crown.transform.SetParent(transform);
+        float s = Random.Range(2.5f, 4f);
+        crown.transform.position = basePos + Vector3.up * (h + s * 0.35f);
+        crown.transform.localScale = new Vector3(s, s * 0.9f, s);
+        crown.GetComponent<Renderer>().sharedMaterial = leavesMat;
+        Destroy(crown.GetComponent<Collider>());   // Sadece gövdeye çarpılsın
+    }
+
+    // Yolun ortasına çizgi: ana caddelerde sürekli çift sarı, ara sokaklarda kesik beyaz.
+    // Çizgiler kavşakların içine girmez.
+    void CreateRoadLines(RoadEdge e)
+    {
+        Vector3 dir = (e.b.position - e.a.position).normalized;
+        bool alongX = Mathf.Abs(dir.x) > 0.5f;
+
+        // Kavşağın bu yön boyunca yarı genişliği = kesişen yolun yarı genişliği
+        float startGap = (alongX ? layout.xWidths[e.a.gridIndex.x] : layout.zWidths[e.a.gridIndex.y]) / 2f + 1f;
+        float endGap = (alongX ? layout.xWidths[e.b.gridIndex.x] : layout.zWidths[e.b.gridIndex.y]) / 2f + 1f;
+
+        Vector3 start = e.a.position + dir * startGap;
+        float length = e.Length - startGap - endGap;
+        if (length <= 0f) return;
+
+        Quaternion rot = Quaternion.LookRotation(dir);
+        Vector3 side = Vector3.Cross(Vector3.up, dir);
+
+        if (e.isMain)
+        {
+            for (int k = -1; k <= 1; k += 2)
+            {
+                Vector3 c = start + dir * (length / 2f) + side * (0.15f * k) + Vector3.up * 0.01f;
+                CreateLine(c, rot, new Vector3(0.12f, 0.02f, length), lineYellowMat);
+            }
+        }
+        else
+        {
+            float dash = 3f, gap = 3f;
+            for (float d = 0f; d + dash <= length; d += dash + gap)
+            {
+                Vector3 c = start + dir * (d + dash / 2f) + Vector3.up * 0.01f;
+                CreateLine(c, rot, new Vector3(0.15f, 0.02f, dash), lineWhiteMat);
+            }
+        }
+    }
+
+    void CreateLine(Vector3 center, Quaternion rot, Vector3 size, Material mat)
+    {
+        GameObject go = CreateBox("Cizgi", center, size, mat);
+        go.transform.rotation = rot;
+        Destroy(go.GetComponent<Collider>());
+    }
+
+    void PlaceTaxi()
+    {
+        if (taxi == null) return;
+        RoadNode start = layout.Network.NearestNode(Vector3.zero);
+        Vector3 forward = start.edges.Count > 0 ? start.edges[0].DirectionFrom(start) : Vector3.forward;
+
+        Vector3 pos = start.position + Vector3.up * 0.5f;
+        Quaternion rot = Quaternion.LookRotation(forward);
+        taxi.SetPositionAndRotation(pos, rot);
+        Rigidbody rb = taxi.GetComponent<Rigidbody>();
+        if (rb != null) { rb.position = pos; rb.rotation = rot; }
     }
 
     // Direk + parlayan başlık + gerçek ışık kaynağından oluşan bir sokak lambası

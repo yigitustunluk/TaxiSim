@@ -4,17 +4,17 @@ using System.Collections.Generic;
 // Şehrin yollarında kendi başına dolaşan bir trafik aracı.
 //
 // Nasıl çalışır?
-// - Şehir bir ızgara. Yolların kesiştiği her kavşağın bir "adresi" var: (x, z) gibi tam sayılar.
-// - Araç bir kavşaktan komşu kavşağa gider. Her kavşakta rastgele yeni bir yön seçer,
-//   ama geldiği yöne geri dönmez (U dönüşü yapmaz).
-// - Sağ şeritten gider (Türkiye'deki gibi).
-// - Önünde başka bir araç (taksi dahil) varsa durur.
+// - Şehir bir yol ağı: kavşaklar (düğüm) ve aralarındaki yollar (kenar).
+// - Araç bir kavşaktan, bir yol boyunca komşu kavşağa gider. Her kavşakta o kavşaktan
+//   çıkan yollardan birini rastgele seçer, ama geldiği yola geri dönmez (U dönüşü yapmaz).
+// - Sağ şeritten gider (Türkiye'deki gibi). Şeridin yeri yolun genişliğine göre hesaplanır.
+// - Önünde başka bir araç (taksi dahil) varsa durur. Kırmızı ışıkta durur.
 [RequireComponent(typeof(Rigidbody))]
 public class TrafficCar : MonoBehaviour
 {
     [Header("Bağlantılar (Inspector'dan sürükle)")]
-    public CityGenerator city;
-    public TrafficLightSystem lights;    // Boşsa ışıklara uymaz
+    public CityLayout layout;            // Yol ağı
+    public TrafficLightSystem lights;    // Boşsa ya da kapalıysa ışıklara uymaz
 
     [Header("Sürüş")]
     public float speed = 10f;            // m/s (≈ 36 km/s)
@@ -27,12 +27,11 @@ public class TrafficCar : MonoBehaviour
     public float stopMargin = 5f;
 
     Rigidbody rb;
-    float cell;                          // Bir blok + bir yol genişliği
-    int minIndex, maxIndex;              // Geçerli kavşak adresleri aralığı
 
-    Vector2Int currentNode;              // Çıktığımız kavşak
-    Vector2Int nextNode;                 // Gittiğimiz kavşak
-    Vector2Int direction;                // Izgara üzerindeki yön: (1,0), (-1,0), (0,1), (0,-1)
+    RoadNode currentNode;                // Çıktığımız kavşak
+    RoadNode nextNode;                   // Gittiğimiz kavşak
+    RoadEdge currentEdge;                // Üzerinde gittiğimiz yol
+    Vector3 direction;                   // Yolun yönü (birim vektör)
 
     // Her yol parçasında iki hedef nokta var: parçanın başı ve sonu (sağ şeritte).
     // Kavşağın içindeki dönüş, bir parçanın sonundan diğerinin başına giderken olur.
@@ -48,23 +47,15 @@ public class TrafficCar : MonoBehaviour
         rb.isKinematic = true;   // Fizik motoru itmez, onu biz hareket ettiririz. Taksi yine de ona çarpabilir.
         rb.interpolation = RigidbodyInterpolation.Interpolate;
 
-        cell = city.blockSize + city.roadWidth;
-        int half = city.blocksPerSide / 2;
-        minIndex = -half;
-        maxIndex = city.blocksPerSide - half;
-
-        // Başlangıç konumuna en yakın kavşağı bul
-        currentNode = new Vector2Int(
-            Mathf.Clamp(Mathf.RoundToInt(transform.position.x / cell), minIndex, maxIndex),
-            Mathf.Clamp(Mathf.RoundToInt(transform.position.z / cell), minIndex, maxIndex));
-
-        direction = Vector2Int.zero;   // Henüz bir yönümüz yok, ilk seçimde her yön serbest
-        ChooseNextDirection();
+        // Başlangıç konumuna en yakın kavşaktan başla
+        currentNode = layout.Network.NearestNode(transform.position);
+        currentEdge = null;              // Henüz bir yoldan gelmedik, ilk seçimde her yol serbest
+        ChooseNextEdge();
         PlanSegment();
 
         // Aracı ilk yol parçasının başına koy ve doğru yöne çevir
         transform.position = waypoints[0];
-        transform.rotation = Quaternion.LookRotation(DirectionToWorld(direction));
+        transform.rotation = Quaternion.LookRotation(direction);
         waypointIndex = 1;
     }
 
@@ -96,7 +87,7 @@ public class TrafficCar : MonoBehaviour
         // TRAFİK IŞIĞI: Kavşağa yaklaşıyorsak (yol parçasının sonuna gidiyorsak) ışığa bak.
         // waypoints[1], kavşağın tam kenarında, yani "dur çizgisinde".
         bool mustStop = false;
-        if (lights != null && waypointIndex == 1)
+        if (lights != null && lights.isActiveAndEnabled && waypointIndex == 1)
         {
             SignalColor signal = lights.GetSignal(nextNode, direction);
             // Sarıda: çizgiye çok yakınsak geç (aniden duramayız), uzaksak dur
@@ -164,51 +155,41 @@ public class TrafficCar : MonoBehaviour
         else
         {
             currentNode = nextNode;     // Parçanın sonuna, yani kavşağa geldik
-            ChooseNextDirection();      // Yeni yön seç
+            ChooseNextEdge();           // Yeni yol seç
             PlanSegment();
             waypointIndex = 0;          // Yeni parçanın başına git (kavşakta dönüş)
         }
     }
 
-    // Bulunduğumuz kavşaktan gidilebilecek yönlerden birini rastgele seçer
-    void ChooseNextDirection()
+    // Bulunduğumuz kavşaktan çıkan yollardan birini rastgele seçer
+    void ChooseNextEdge()
     {
-        Vector2Int[] allDirections = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-        List<Vector2Int> options = new List<Vector2Int>();
+        List<RoadEdge> options = new List<RoadEdge>();
+        foreach (RoadEdge e in currentNode.edges)
+            if (e != currentEdge) options.Add(e);        // Geldiğimiz yola geri dönme
 
-        foreach (Vector2Int d in allDirections)
-        {
-            if (d == -direction) continue;                // Geldiğimiz yöne geri dönme
-            Vector2Int n = currentNode + d;
-            bool insideCity = n.x >= minIndex && n.x <= maxIndex && n.y >= minIndex && n.y <= maxIndex;
-            if (insideCity) options.Add(d);
-        }
+        if (options.Count == 0) options.Add(currentEdge); // Çıkmaz: mecburen geri dön
 
-        if (options.Count == 0) options.Add(-direction);  // Çıkmaz: mecburen geri dön
-
-        direction = options[rng.Next(options.Count)];
-        nextNode = currentNode + direction;
+        currentEdge = options[rng.Next(options.Count)];
+        nextNode = currentEdge.Other(currentNode);
+        direction = currentEdge.DirectionFrom(currentNode);
     }
 
-    // Seçilen yol parçasının başlangıç ve bitiş noktalarını hesaplar (sağ şeritte)
+    // Seçilen yol parçasının başlangıç ve bitiş noktalarını hesaplar (sağ şeritte).
+    // Noktalar kavşağın dışında: kavşağın bu yöndeki yarı genişliği kadar içeride.
     void PlanSegment()
     {
-        Vector3 forward = DirectionToWorld(direction);
-        Vector3 right = Vector3.Cross(Vector3.up, forward);   // İleriye göre sağ taraf
-        Vector3 laneOffset = right * (city.roadWidth / 4f);   // Yolun sağ yarısının ortası
-        float edge = city.roadWidth / 2f;                     // Kavşağın kenarı
+        Vector3 right = Vector3.Cross(Vector3.up, direction);       // Gidiş yönüne göre sağ
+        Vector3 laneOffset = right * (currentEdge.width / 4f);      // Sağ yarının ortası
 
-        waypoints[0] = NodeToWorld(currentNode) + forward * edge + laneOffset;
-        waypoints[1] = NodeToWorld(nextNode) - forward * edge + laneOffset;
+        waypoints[0] = currentNode.position + direction * IntersectionHalfSize(currentNode) + laneOffset;
+        waypoints[1] = nextNode.position - direction * IntersectionHalfSize(nextNode) + laneOffset;
     }
 
-    Vector3 NodeToWorld(Vector2Int node)
+    // Kavşağın, gidiş yönümüz boyunca yarı genişliği = kesişen yolun yarı genişliği
+    float IntersectionHalfSize(RoadNode node)
     {
-        return new Vector3(node.x * cell, 0f, node.y * cell);
-    }
-
-    Vector3 DirectionToWorld(Vector2Int d)
-    {
-        return new Vector3(d.x, 0f, d.y);
+        bool alongX = Mathf.Abs(direction.x) > 0.5f;
+        return (alongX ? layout.xWidths[node.gridIndex.x] : layout.zWidths[node.gridIndex.y]) / 2f;
     }
 }
