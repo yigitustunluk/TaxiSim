@@ -119,6 +119,11 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!4 &73723737 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -764697234159880554, guid: 358d5c94076105f4a9c43b7bf67da080, type: 3}
+  m_PrefabInstance: {fileID: 1669343849}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &91117425
 GameObject:
   m_ObjectHideFlags: 0
@@ -1126,6 +1131,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 467287727}
   m_CullTransparentMesh: 1
+--- !u!4 &523397212 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -7529372644190115253, guid: 358d5c94076105f4a9c43b7bf67da080, type: 3}
+  m_PrefabInstance: {fileID: 1669343849}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &538237877
 GameObject:
   m_ObjectHideFlags: 0
@@ -1141,6 +1151,7 @@ GameObject:
   - component: {fileID: 538237885}
   - component: {fileID: 538237884}
   - component: {fileID: 538237886}
+  - component: {fileID: 538237887}
   m_Layer: 0
   m_Name: Taxi
   m_TagString: Untagged
@@ -1366,6 +1377,24 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 302b534bf88914941a09b3777c94deb6, type: 2}
   - {fileID: 11400000, guid: 8f5ceccb1c0e66542bd06420771bc02a, type: 2}
   - {fileID: 11400000, guid: 7ff07ecd0ae15454da7b092603d3b028, type: 2}
+--- !u!114 &538237887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 538237877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a5e1f2906536724ab46a6fd547ee67d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WheelVisuals
+  frontLeft: {fileID: 523397212}
+  frontRight: {fileID: 73723737}
+  backLeft: {fileID: 1254795944}
+  backRight: {fileID: 1554294061}
+  maxSteerAngle: 30
+  steerSmooth: 10
 --- !u!1 &556779825
 GameObject:
   m_ObjectHideFlags: 0
@@ -2701,6 +2730,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1213698050}
   m_CullTransparentMesh: 1
+--- !u!4 &1254795944 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -825074972063419734, guid: 358d5c94076105f4a9c43b7bf67da080, type: 3}
+  m_PrefabInstance: {fileID: 1669343849}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1266254033
 GameObject:
   m_ObjectHideFlags: 0
@@ -3241,6 +3275,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1534592485}
   m_CullTransparentMesh: 1
+--- !u!4 &1554294061 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8565876716882154066, guid: 358d5c94076105f4a9c43b7bf67da080, type: 3}
+  m_PrefabInstance: {fileID: 1669343849}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1623708154
 GameObject:
   m_ObjectHideFlags: 0

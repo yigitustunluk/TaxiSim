@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 public class TaxiController : MonoBehaviour
 {
     [Header("Motor")]
-    public float acceleration = 12f;         // İleri ivme (m/s²)
+    public float acceleration = 8.5f;        // İleri ivme (m/s²)
     public float reverseAcceleration = 6f;   // Geri vites ivmesi
     public float maxSpeed = 25f;             // m/s  (25 m/s ≈ 90 km/s)
     public float brakeForce = 20f;           // Fren gücü
@@ -33,6 +33,8 @@ public class TaxiController : MonoBehaviour
     public float SpeedKmh => rb.linearVelocity.magnitude * 3.6f;
     public float Throttle => throttleInput;              // Motor sesi için: gaza basılıyor mu
     public float MaxSpeedKmh => maxSpeed * 3.6f;
+    public float Steer => steerInput;                                       // -1 sol, +1 sağ
+    public float ForwardSpeed => Vector3.Dot(rb.linearVelocity, transform.forward); // m/s, geri giderken eksi
 
     // ÇARPIŞMA OLAYI (event): Taksi sert bir şeye çarpınca bunu "duyurur".
     // Başka script'ler (PassengerManager gibi) bu duyuruya abone olup tepki verir.
