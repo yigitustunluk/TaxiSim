@@ -811,12 +811,14 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4ee925e45e62cf14ebffaa5af282e230, type: 2}
   - {fileID: 11400000, guid: b4ace477116d4ec4facc6669cbd4128e, type: 2}
   - {fileID: 11400000, guid: 53ad53a1a019d42439022e149dd6e295, type: 2}
-  expectedSpeed: 8.5
-  extraTime: 5
+  expectedSpeed: 10
+  extraTime: 8
   timePerIntersection: 3
   tipPercent: 0.3
   latePenalty: 0.3
   crashPenalty: 15
+  speedTolerance: 5
+  speedGraceTime: 1
   redLightPenalty: 30
   sidewalkPenalty: 25
 --- !u!4 &390591185
@@ -1200,6 +1202,7 @@ MonoBehaviour:
   reverseAcceleration: 6
   maxSpeed: 25
   brakeForce: 20
+  throttleRiseRate: 1.5
   turnSpeed: 80
   gripStrength: 10
   groundCheckDistance: 1
@@ -1402,6 +1405,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 302b534bf88914941a09b3777c94deb6, type: 2}
   - {fileID: 11400000, guid: 8f5ceccb1c0e66542bd06420771bc02a, type: 2}
   - {fileID: 11400000, guid: 7ff07ecd0ae15454da7b092603d3b028, type: 2}
+  engineAccelerationShare: 0.4
 --- !u!114 &538237887
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -13,6 +13,10 @@ public class TaxiController : MonoBehaviour
     public float maxSpeed = 25f;             // m/s  (25 m/s ≈ 90 km/s)
     public float brakeForce = 20f;           // Fren gücü
 
+    [Tooltip("Gaz pedalının tam basılı hâle gelme hızı (saniyede). 1.5 = W'ya basınca ~0.7 sn'de tam gaz. " +
+             "Klavyede gaz ya 0 ya 1 olduğu için bu, pedala yavaşça basmayı taklit eder.")]
+    public float throttleRiseRate = 1.5f;
+
     [Header("Direksiyon")]
     public float turnSpeed = 80f;            // Saniyede kaç derece döner
     public float gripStrength = 6f;          // Yüksek = az kayma, düşük = drift
@@ -24,6 +28,7 @@ public class TaxiController : MonoBehaviour
     float throttleInput;   // -1 (geri) ile +1 (ileri) arası
     float steerInput;      // -1 (sol) ile +1 (sağ) arası
     bool brakeInput;
+    float pedal;           // 0-1 arası yumuşatılmış gaz pedalı
     bool isGrounded;
 
     // Taksi şu an kaldırımın üstünde mi? PassengerManager bunu okuyup ceza verir.
@@ -81,6 +86,11 @@ public class TaxiController : MonoBehaviour
         if (kb.aKey.isPressed || kb.leftArrowKey.isPressed)  steerInput -= 1f;
 
         brakeInput = kb.spaceKey.isPressed;
+
+        // Pedal: W basılıyken yavaşça artar, bırakınca hızla düşer
+        float target = throttleInput > 0f ? 1f : 0f;
+        float rate = target > pedal ? throttleRiseRate : 6f;
+        pedal = Mathf.MoveTowards(pedal, target, rate * Time.deltaTime);
     }
 
     // FixedUpdate: fizik adımlarında çalışır. Kuvvetleri burada uygularız.
@@ -108,7 +118,13 @@ public class TaxiController : MonoBehaviour
             // Hız 0'dayken tam güç, azami hızdayken %25 güç.
             float speedRatio = Mathf.Clamp01(forwardSpeed / maxSpeed);
             float accelFactor = Mathf.Lerp(1f, 0.25f, speedRatio);
-            rb.AddForce(forward * acceleration * accelFactor, ForceMode.Acceleration);
+            rb.AddForce(forward * acceleration * accelFactor * pedal, ForceMode.Acceleration);
+
+            // Rigidbody'nin Linear Damping'i (hava direnci gibi) hızla orantılı bir fren uygular.
+            // Gaza basılırken bunu motor yenmeli. Yoksa direnç, zayıflayan ivmeyle dengeye gelir
+            // ve taksi azami hıza hiç ulaşamaz (55 km/s'de takılı kalıyordu).
+            // Gaz bırakılınca direnç yine çalışır, taksi yavaşça süzülerek durur.
+            rb.AddForce(forward * rb.linearDamping * Mathf.Max(0f, forwardSpeed), ForceMode.Acceleration);
         }
         else if (throttleInput < 0f)
         {

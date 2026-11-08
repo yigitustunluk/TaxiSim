@@ -10,6 +10,10 @@ public class TaxiUpgrades : MonoBehaviour
 {
     public UpgradeDefinition[] upgrades;
 
+    [Tooltip("Motor yükseltmesinin ivmeye etkisi, azami hıza etkisinin bu oranı kadar. " +
+             "0.4 = azami hız %15 artarken ivme %6 artar. Böylece yükseltilmiş taksi kontrolsüz hızlanmaz.")]
+    [Range(0f, 1f)] public float engineAccelerationShare = 0.4f;
+
     TaxiController taxi;
     float baseAcceleration, baseMaxSpeed, baseBrakeForce, baseGrip;
 
@@ -40,8 +44,8 @@ public class TaxiUpgrades : MonoBehaviour
             switch (u.stat)
             {
                 case UpgradeStat.Engine:
-                    taxi.acceleration *= m;
                     taxi.maxSpeed *= m;
+                    taxi.acceleration *= 1f + (m - 1f) * engineAccelerationShare;
                     break;
                 case UpgradeStat.Brakes:
                     taxi.brakeForce *= m;

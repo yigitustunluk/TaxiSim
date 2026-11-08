@@ -24,12 +24,14 @@ public class PassengerManager : MonoBehaviour
     public PassengerType[] passengerTypes;   // Boş bırakılırsa herkes normal yolcu olur
 
     [Header("Süre ve Bahşiş")]
-    public float expectedSpeed = 10f;      // Süre hesabı için beklenen ortalama hız (m/s)
+    public float expectedSpeed = 8.5f;     // Süre hesabı için beklenen ortalama hız (m/s)
     public float extraTime = 5f;           // Süreye eklenen ek pay (saniye)
     public float timePerIntersection = 3f; // Yoldaki her kavşak için ek süre (kırmızı ışık payı)
     public float tipPercent = 0.3f;        // Tam memnuniyette bahşiş: ücretin %30'u
     public float latePenalty = 0.3f;       // Geç kalınca ücretten kesilen oran: %30
     public float crashPenalty = 15f;       // Her çarpışmada memnuniyet kaybı (puan)
+    public float speedTolerance = 5f;      // Hız sınırını bu kadar (km/s) aşmak tolere edilir
+    public float speedGraceTime = 1f;      // Sınırı bu kadar saniye aşınca ceza başlar
     public float redLightPenalty = 30f;    // Kırmızıda geçince memnuniyet kaybı (puan)
     public float sidewalkPenalty = 25f;    // Kaldırımda geçen her saniye memnuniyet kaybı (puan)
 
@@ -44,6 +46,7 @@ public class PassengerManager : MonoBehaviour
     float meterDistance;        // Yolcu bindikten sonra gidilen gerçek mesafe (metre)
     float waitTime;             // Yolcu taksideyken durarak geçen süre (saniye)
     Vector3 lastTaxiPos;        // Taksinin bir önceki karedeki konumu
+    float overSpeedTimer;       // Sınır ne kadar süredir aşılıyor (saniye)
     float totalTime;            // Yolculuk başındaki toplam süre (aceleci yolcunun bahşişi için)
     float timeLeft;             // Kalan süre (saniye). Eksiye düşerse geç kalmışsın.
     float satisfaction;         // Yolcu memnuniyeti (0-100)
@@ -95,8 +98,13 @@ public class PassengerManager : MonoBehaviour
             timeLeft -= Time.deltaTime;
             RunMeter();
 
-            // Hız sınırı olan yolcu (hassas, VIP) hızlı sürünce rahatsız olur
-            if (IsOverSpeedLimit)
+            // Hız sınırı olan yolcu (hassas, VIP) hızlı sürünce rahatsız olur.
+            // Klavyede gaz ya tam basılı ya bırakılmış olduğu için sınırda tam durmak zor:
+            // sınırı biraz aşmak tolere edilir ve ceza ancak bir süre aşılınca başlar.
+            bool clearlyOver = SpeedLimitKmh > 0f && taxi.SpeedKmh > SpeedLimitKmh + speedTolerance;
+            overSpeedTimer = clearlyOver ? overSpeedTimer + Time.deltaTime : 0f;
+
+            if (overSpeedTimer > speedGraceTime)
             {
                 satisfaction = Mathf.Max(0f, satisfaction - currentType.speedPenaltyPerSecond * Time.deltaTime);
                 ShowMessage("Çok hızlısın! Yolcu rahatsız");
