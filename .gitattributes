@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# --- GitHub dil istatistikleri (Linguist) ---
+# Bu dosyalar projeyle birlikte gelen hazır paketler; bizim yazdığımız kod değil.
+# "linguist-vendored" diyerek GitHub'ın dil çubuğunda saymamasını söylüyoruz.
+Assets/TextMesh?Pro/** linguist-vendored
