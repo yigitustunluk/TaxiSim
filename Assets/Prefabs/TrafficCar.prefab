@@ -96,10 +96,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrafficCar
   city: {fileID: 0}
+  lights: {fileID: 0}
   speed: 10
   acceleration: 8
   turnSpeed: 180
   brakeDistance: 8
+  stopMargin: 5
 --- !u!1001 &3100731053533302127
 PrefabInstance:
   m_ObjectHideFlags: 0

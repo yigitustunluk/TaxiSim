@@ -8,6 +8,7 @@ public class TrafficSpawner : MonoBehaviour
     [Header("Bağlantılar (Inspector'dan sürükle)")]
     public TrafficCar carPrefab;     // Project'teki TrafficCar prefab'ı
     public CityGenerator city;
+    public TrafficLightSystem lights;
 
     [Header("Ayarlar")]
     public int carCount = 8;         // Kaç araç olacak
@@ -43,6 +44,7 @@ public class TrafficSpawner : MonoBehaviour
             // Prefab'lar sahnedeki objelere bağlantı tutamaz, o yüzden şehri burada veriyoruz.
             // Bu satır aracın Start()'ından önce çalışır, yani araç şehri hazır bulur.
             car.city = city;
+            car.lights = lights;
         }
     }
 }

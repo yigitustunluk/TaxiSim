@@ -213,6 +213,7 @@ GameObject:
   m_Component:
   - component: {fileID: 157382671}
   - component: {fileID: 157382670}
+  - component: {fileID: 157382672}
   m_Layer: 0
   m_Name: City
   m_TagString: Untagged
@@ -261,6 +262,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &157382672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 157382669}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c5b7ffbdb804cd4eadc2606747e9d2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TrafficLightSystem
+  city: {fileID: 157382670}
+  baseMaterial: {fileID: 2100000, guid: c42a4d05b5713304ca50b479ce6b2484, type: 2}
+  greenTime: 8
+  yellowTime: 2
+  allRedTime: 1
 --- !u!1 &225356673
 GameObject:
   m_ObjectHideFlags: 0
@@ -841,6 +859,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TrafficSpawner
   carPrefab: {fileID: 8717126181362990062, guid: cdeeee496447c594ca01c69b8b23a00b, type: 3}
   city: {fileID: 157382670}
+  lights: {fileID: 157382672}
   carCount: 8
 --- !u!1 &410087039
 GameObject:

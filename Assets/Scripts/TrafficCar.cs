@@ -14,12 +14,17 @@ public class TrafficCar : MonoBehaviour
 {
     [Header("Bağlantılar (Inspector'dan sürükle)")]
     public CityGenerator city;
+    public TrafficLightSystem lights;    // Boşsa ışıklara uymaz
 
     [Header("Sürüş")]
     public float speed = 10f;            // m/s (≈ 36 km/s)
     public float acceleration = 8f;      // Kalkış ve duruş yumuşaklığı
     public float turnSpeed = 180f;       // Saniyede kaç derece döner
     public float brakeDistance = 8f;     // Önündeki araca bu mesafede durur
+    // Kırmızıda aracın MERKEZİ kavşak kenarından ne kadar önce durur.
+    // Araç 4 m uzun, merkezi ortasında: ön tamponu merkezden 2 m önde.
+    // Işık direği kavşaktan 2.5 m önde. 2.5 + 2 + 0.5 boşluk = 5 m: tampon direğin hemen gerisinde durur.
+    public float stopMargin = 5f;
 
     Rigidbody rb;
     float cell;                          // Bir blok + bir yol genişliği
@@ -87,6 +92,24 @@ public class TrafficCar : MonoBehaviour
 
         // Hızı yumuşakça hedef hıza yaklaştır (engel varsa 0'a)
         float desiredSpeed = blocked ? 0f : speed;
+
+        // TRAFİK IŞIĞI: Kavşağa yaklaşıyorsak (yol parçasının sonuna gidiyorsak) ışığa bak.
+        // waypoints[1], kavşağın tam kenarında, yani "dur çizgisinde".
+        bool mustStop = false;
+        if (lights != null && waypointIndex == 1)
+        {
+            SignalColor signal = lights.GetSignal(nextNode, direction);
+            // Sarıda: çizgiye çok yakınsak geç (aniden duramayız), uzaksak dur
+            mustStop = signal == SignalColor.Red || (signal == SignalColor.Yellow && distance > stopMargin + 4f);
+
+            if (mustStop)
+            {
+                // Çizgiye yaklaştıkça hedef hızı düşür: 13 metreden itibaren yavaşla, çizgide dur
+                float slowDown = Mathf.Clamp01((distance - stopMargin) / 12f);
+                desiredSpeed = Mathf.Min(desiredSpeed, speed * slowDown);
+            }
+        }
+
         currentSpeed = Mathf.MoveTowards(currentSpeed, desiredSpeed, acceleration * Time.fixedDeltaTime);
 
         if (distance > 0.01f)
@@ -95,12 +118,14 @@ public class TrafficCar : MonoBehaviour
             Quaternion look = Quaternion.LookRotation(toTarget);
             rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, look, turnSpeed * Time.fixedDeltaTime));
 
-            // Hedefe doğru ilerle (hedefi geçmeyecek kadar)
-            float step = Mathf.Min(currentSpeed * Time.fixedDeltaTime, distance);
+            // Hedefe doğru ilerle (hedefi geçmeyecek kadar).
+            // Kırmızıda dur çizgisini asla geçme.
+            float maxStep = mustStop ? Mathf.Max(0f, distance - stopMargin) : distance;
+            float step = Mathf.Min(currentSpeed * Time.fixedDeltaTime, maxStep);
             rb.MovePosition(rb.position + toTarget.normalized * step);
         }
 
-        if (distance < 0.5f) AdvanceWaypoint();
+        if (distance < 0.5f && !mustStop) AdvanceWaypoint();
     }
 
     // Önümüzdeki yolu araç genişliğinde bir kutuyla tarar.
