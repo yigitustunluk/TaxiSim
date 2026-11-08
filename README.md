@@ -7,6 +7,8 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 | Day | Night |
 |---|---|
 | ![Day](Docs/screenshot-day.png) | ![Night](Docs/screenshot-night.png) |
+| **Main menu** | **Garage** |
+| ![Main menu](Docs/screenshot-menu.png) | ![Garage](Docs/screenshot-garage.png) |
 
 ## Gameplay
 
