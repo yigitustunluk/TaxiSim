@@ -15,6 +15,7 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 - The **taximeter** charges by distance driven and time spent waiting, like a real cab.
 - Arrive on time for a **tip**. Crashes and driving on the sidewalk lower passenger satisfaction, and with it your tip.
 - Arrive late and the passenger disputes the meter: they pay at most the fare of the shortest route, minus 30%. Taking the long way never pays.
+- **Passenger types** change how you need to drive: *Hurried* passengers tip more the earlier you arrive, *Careful* ones have a speed limit and double penalties, and rare *VIP* passengers pay 2.5× but expect a smooth ride.
 - Progress is **auto-saved** after every ride in one of **3 save slots**. Spend your earnings in the **Garage** (pause menu) to upgrade the engine, brakes and tyres; upgrades apply instantly.
 
 ## Controls
@@ -30,13 +31,14 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 
 ## Features
 
-- **Arcade vehicle physics**: force-based controller on a Rigidbody with custom lateral grip instead of WheelColliders.
+- **Arcade vehicle physics**: force-based controller on a Rigidbody with custom lateral grip instead of WheelColliders; acceleration falls off towards top speed like a real car.
 - **Procedural city**: grid of blocks, sidewalks, buildings and street lamps generated at runtime from a seed.
 - **Traffic AI**: cars navigate the road grid intersection by intersection, keep to the right lane, and brake for obstacles using a `BoxCast` along their *intended* path, so they also see cars while turning.
 - **Passenger loop**: state machine (`enum`) for pick-up / drop-off, time limit, tips and satisfaction.
 - **Day/night cycle**: animated sun, flat ambient and fog driven by time of day, headlights and street lamps that switch on at dusk, lit building windows.
 - **Procedural textures**: building window patterns are drawn in code, tiled to whole floors and windows.
 - **Save system**: 3 save slots stored as JSON files in `Application.persistentDataPath` (`JsonUtility`), auto-save after each ride, slot overview with money, rides and last played time, overwrite confirmation. The game code talks only to a static `SaveData` class, so the storage format could change without touching gameplay scripts.
+- **Passenger types as data**: each type is a `ScriptableObject` (spawn weight, fare/time multipliers, tip rate, penalty multiplier, speed limit, speed-based tip). Types are chosen with weighted random selection; trip time adapts to the passenger's speed limit.
 - **Data-driven upgrades**: each upgrade is a `ScriptableObject` asset (name, prices per level, bonus per level, affected stat). Adding a new upgrade needs no code or UI changes; the garage builds its rows from a prefab at runtime.
 - **Menus**: main menu (New Game / Load Game / Quit) and an ESC pause menu with the garage (`Time.timeScale`, audio pause, scene loading with `SceneManager`).
 - **Live upgrades**: the taxi stores its base stats once and recomputes them from scratch on every purchase, so repeated applications never stack.
@@ -71,6 +73,7 @@ Some problems I ran into and how they were solved:
 | `SaveData` | Save slots (JSON), money, rides, upgrade levels |
 | `SlotMenu` / `SlotRow` | New Game / Load Game slot screen |
 | `UpgradeDefinition` | ScriptableObject describing one upgrade |
+| `PassengerType` | ScriptableObject describing one passenger type |
 | `TaxiUpgrades` | Applies purchased upgrades to the taxi |
 | `GarageMenu` / `UpgradeRow` | Garage screen and its generated rows |
 

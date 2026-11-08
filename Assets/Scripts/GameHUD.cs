@@ -27,11 +27,13 @@ public class GameHUD : MonoBehaviour
 
         sb.Clear();
 
-        // 1. satır: görev (rengi göreve göre)
-        if (passengers.IsCarryingPassenger)
-            sb.AppendLine(Colored("YOLCUYU BIRAK", dropoffColor));
-        else
-            sb.AppendLine(Colored("YOLCUYU AL", pickupColor));
+        // 1. satır: görev (rengi göreve göre) ve yolcunun tipi
+        string task = passengers.IsCarryingPassenger
+            ? Colored("YOLCUYU BIRAK", dropoffColor)
+            : Colored("YOLCUYU AL", pickupColor);
+        PassengerType type = passengers.CurrentType;
+        if (type != null) task += "  " + Colored("<b>" + type.displayName + "</b>", type.color);
+        sb.AppendLine(task);
 
         sb.AppendLine("Mesafe: " + passengers.DistanceToTarget().ToString("0") + " m");
 
@@ -49,6 +51,13 @@ public class GameHUD : MonoBehaviour
                 sb.AppendLine(Colored("GECİKTİN! " + (-t).ToString("0") + " sn", warningColor));
             }
 
+            float limit = passengers.SpeedLimitKmh;
+            if (limit > 0f)
+            {
+                string limitLine = "Hız sınırı: " + limit.ToString("0") + " km/s";
+                sb.AppendLine(passengers.IsOverSpeedLimit ? Colored(limitLine, warningColor) : limitLine);
+            }
+
             sb.AppendLine("Taksimetre: " + passengers.CurrentFare.ToString("0") + " TL");
             sb.AppendLine("Gidilen yol: " + (passengers.MeterDistance / 1000f).ToString("0.00") + " km");
             sb.AppendLine("Memnuniyet: %" + passengers.Satisfaction.ToString("0"));
@@ -62,7 +71,10 @@ public class GameHUD : MonoBehaviour
 
         // Hız göstergesi: büyük sayı, yanında küçük birim
         if (speedText != null && taxi != null)
+        {
             speedText.text = taxi.SpeedKmh.ToString("0") + "<size=40%> km/s</size>";
+            speedText.color = passengers.IsOverSpeedLimit ? warningColor : Color.white;  // Sınır aşılınca kırmızı
+        }
 
         // Mesaj: sadece süresi dolmamışken görünür
         if (messageText != null)

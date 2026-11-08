@@ -19,6 +19,9 @@ public class PassengerManager : MonoBehaviour
     public float farePerMeter = 0.2f;      // Metre başına ücret (TL)
     public float farePerWaitSecond = 0.5f; // Dururken (trafikte beklerken) saniye başına ücret (TL)
 
+    [Header("Yolcu Tipleri")]
+    public PassengerType[] passengerTypes;   // Boş bırakılırsa herkes normal yolcu olur
+
     [Header("Süre ve Bahşiş")]
     public float expectedSpeed = 12f;      // Süre hesabı için beklenen ortalama hız (m/s)
     public float extraTime = 5f;           // Süreye eklenen ek pay (saniye)
@@ -38,8 +41,10 @@ public class PassengerManager : MonoBehaviour
     float meterDistance;        // Yolcu bindikten sonra gidilen gerçek mesafe (metre)
     float waitTime;             // Yolcu taksideyken durarak geçen süre (saniye)
     Vector3 lastTaxiPos;        // Taksinin bir önceki karedeki konumu
+    float totalTime;            // Yolculuk başındaki toplam süre (aceleci yolcunun bahşişi için)
     float timeLeft;             // Kalan süre (saniye). Eksiye düşerse geç kalmışsın.
     float satisfaction;         // Yolcu memnuniyeti (0-100)
+    PassengerType currentType;  // Bekleyen ya da taşınan yolcunun tipi
     float totalMoney;           // Kasadaki toplam para (kayıttan yüklenir, her yolculukta kaydedilir)
     int completedRides;         // Tamamlanan yolculuk sayısı
     string message = "";        // Ekranda kısa süre görünen mesaj
@@ -55,6 +60,9 @@ public class PassengerManager : MonoBehaviour
     public float MeterDistance => meterDistance;
     public float TimeLeft => timeLeft;
     public float Satisfaction => satisfaction;
+    public PassengerType CurrentType => currentType;
+    public float SpeedLimitKmh => currentType != null ? currentType.speedLimitKmh : 0f;
+    public bool IsOverSpeedLimit => IsCarryingPassenger && SpeedLimitKmh > 0f && taxi.SpeedKmh > SpeedLimitKmh;
     public float TotalMoney => SaveData.Money;   // Garajda harcanınca da güncel kalsın
     public int CompletedRides => completedRides;
     public string Message => message;
@@ -82,10 +90,17 @@ public class PassengerManager : MonoBehaviour
             timeLeft -= Time.deltaTime;
             RunMeter();
 
+            // Hız sınırı olan yolcu (hassas, VIP) hızlı sürünce rahatsız olur
+            if (IsOverSpeedLimit)
+            {
+                satisfaction = Mathf.Max(0f, satisfaction - currentType.speedPenaltyPerSecond * Time.deltaTime);
+                ShowMessage("Çok hızlısın! Yolcu rahatsız");
+            }
+
             // Kaldırımda sürmek yolcuyu korkutur
             if (taxi.IsOnSidewalk)
             {
-                satisfaction = Mathf.Max(0f, satisfaction - sidewalkPenalty * Time.deltaTime);
+                satisfaction = Mathf.Max(0f, satisfaction - sidewalkPenalty * PenaltyMult * Time.deltaTime);
                 ShowMessage("Kaldırımdan in! Yolcu korkuyor");
             }
         }
@@ -102,6 +117,7 @@ public class PassengerManager : MonoBehaviour
     void NewPickup()
     {
         state = State.GoingToPickup;
+        currentType = ChooseType();
         targetPos = RandomRoadPoint(taxi.transform.position, 60f);
         PlaceMarker(targetPos, Color.green);
     }
@@ -116,22 +132,29 @@ public class PassengerManager : MonoBehaviour
         meterDistance = 0f;
         waitTime = 0f;
         lastTaxiPos = FlatTaxiPosition();
-        currentFare = baseFare;
+        currentFare = baseFare * FareMult;
 
         // Tahmini ücret: şehir ızgara olduğu için en kısa yol "Manhattan mesafesi"dir
         // (yatay fark + dikey fark). Kuş uçuşu ile gidilemez, binalar var.
         float manhattan = Mathf.Abs(targetPos.x - pickupPos.x) + Mathf.Abs(targetPos.z - pickupPos.z);
-        estimatedFare = baseFare + manhattan * farePerMeter;
+        estimatedFare = (baseFare + manhattan * farePerMeter) * FareMult;
 
         // Süre hesabı için kuş uçuşu mesafe (bu değerleri sen ayarladın, bozmuyoruz)
         float distance = Vector3.Distance(pickupPos, targetPos);
 
         // Süre: mesafeyi beklenen hızla gitmek için gereken zaman + ek pay
-        timeLeft = distance / expectedSpeed + extraTime;
+        // Hız sınırı olan yolcuda beklenen hızı sınıra göre düşür. Yoksa sınıra uyan oyuncu
+        // hiçbir zaman yetişemez. Virajlar ve trafik için sınırın %60'ı ortalama kabul edilir.
+        float speed = expectedSpeed;
+        if (SpeedLimitKmh > 0f) speed = Mathf.Min(speed, SpeedLimitKmh / 3.6f * 0.6f);
+
+        timeLeft = (distance / speed + extraTime) * TimeMult;
+        totalTime = timeLeft;
         satisfaction = 100f;
 
         PlaceMarker(targetPos, new Color(1f, 0.55f, 0f)); // Turuncu
-        ShowMessage("Yolcu bindi! " + timeLeft.ToString("0") + " saniyen var.");
+        string greeting = currentType != null ? currentType.pickupMessage : "Yolcu bindi!";
+        ShowMessage(greeting + " " + timeLeft.ToString("0") + " saniyen var.");
     }
 
     void DropOff()
@@ -142,7 +165,11 @@ public class PassengerManager : MonoBehaviour
         if (timeLeft >= 0f)
         {
             payment = currentFare;
-            tip = currentFare * tipPercent * (satisfaction / 100f);
+            tip = currentFare * TipPct * (satisfaction / 100f);
+
+            // Aceleci yolcu: erken varırsan bahşiş artar (süre bitmek üzereyken yarıya, hiç süre harcamadan 2 katına kadar)
+            if (currentType != null && currentType.tipRewardsSpeed && totalTime > 0f)
+                tip *= Mathf.Lerp(0.5f, 2f, timeLeft / totalTime);
             ShowMessage("Zamanında! " + payment.ToString("0") + " TL + " + tip.ToString("0") + " TL bahşiş");
         }
         else
@@ -159,6 +186,32 @@ public class PassengerManager : MonoBehaviour
         NewPickup();
     }
 
+    // Yolcu tipinin çarpanları. Tip yoksa normal değerler kullanılır.
+    float FareMult => currentType != null ? currentType.fareMultiplier : 1f;
+    float TimeMult => currentType != null ? currentType.timeMultiplier : 1f;
+    float TipPct => currentType != null ? currentType.tipPercent : tipPercent;
+    float PenaltyMult => currentType != null ? currentType.penaltyMultiplier : 1f;
+
+    // Ağırlıklı rastgele seçim: ağırlığı büyük olan tip daha sık çıkar.
+    // Bütün ağırlıkları bir çizgiye art arda dizip çizgi üzerinde rastgele bir nokta seçmek gibi.
+    PassengerType ChooseType()
+    {
+        if (passengerTypes == null || passengerTypes.Length == 0) return null;
+
+        float total = 0f;
+        foreach (PassengerType t in passengerTypes)
+            if (t != null) total += t.spawnWeight;
+
+        float pick = (float)rng.NextDouble() * total;
+        foreach (PassengerType t in passengerTypes)
+        {
+            if (t == null) continue;
+            pick -= t.spawnWeight;
+            if (pick <= 0f) return t;
+        }
+        return passengerTypes[passengerTypes.Length - 1];
+    }
+
     // TAKSİMETRE: Her karede taksinin ne kadar yol aldığını ölçüp ücrete ekler.
     // Dururken de (trafik, kırmızı ışık) zaman ücreti işler, gerçek taksimetre gibi.
     void RunMeter()
@@ -169,7 +222,7 @@ public class PassengerManager : MonoBehaviour
 
         if (taxi.SpeedKmh < maxStopSpeedKmh) waitTime += Time.deltaTime;
 
-        currentFare = baseFare + meterDistance * farePerMeter + waitTime * farePerWaitSecond;
+        currentFare = (baseFare + meterDistance * farePerMeter + waitTime * farePerWaitSecond) * FareMult;
     }
 
     Vector3 FlatTaxiPosition()
@@ -183,8 +236,9 @@ public class PassengerManager : MonoBehaviour
     void HandleCrash(float impact)
     {
         if (state != State.CarryingPassenger) return;   // Boşken çarpmanın cezası yok
-        satisfaction = Mathf.Max(0f, satisfaction - crashPenalty);
-        ShowMessage("Çarpışma! Memnuniyet -" + crashPenalty.ToString("0"));
+        float loss = crashPenalty * PenaltyMult;
+        satisfaction = Mathf.Max(0f, satisfaction - loss);
+        ShowMessage("Çarpışma! Memnuniyet -" + loss.ToString("0"));
     }
 
     // Taksi ile hedef arasındaki yatay mesafe (yüksekliği yok sayar)

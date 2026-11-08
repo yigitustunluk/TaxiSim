@@ -100,7 +100,11 @@ public class TaxiController : MonoBehaviour
         // --- GAZ / GERİ ---
         if (throttleInput > 0f && forwardSpeed < maxSpeed)
         {
-            rb.AddForce(forward * acceleration, ForceMode.Acceleration);
+            // Gerçek arabalar gibi: kalkışta güçlü, azami hıza yaklaştıkça zayıflayan ivme.
+            // Hız 0'dayken tam güç, azami hızdayken %25 güç.
+            float speedRatio = Mathf.Clamp01(forwardSpeed / maxSpeed);
+            float accelFactor = Mathf.Lerp(1f, 0.25f, speedRatio);
+            rb.AddForce(forward * acceleration * accelFactor, ForceMode.Acceleration);
         }
         else if (throttleInput < 0f)
         {

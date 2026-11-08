@@ -780,7 +780,12 @@ MonoBehaviour:
   baseFare: 15
   farePerMeter: 0.2
   farePerWaitSecond: 0.5
-  expectedSpeed: 12
+  passengerTypes:
+  - {fileID: 11400000, guid: 43d58e4c09a0ee14eb0ead368c5fb663, type: 2}
+  - {fileID: 11400000, guid: 4ee925e45e62cf14ebffaa5af282e230, type: 2}
+  - {fileID: 11400000, guid: b4ace477116d4ec4facc6669cbd4128e, type: 2}
+  - {fileID: 11400000, guid: 53ad53a1a019d42439022e149dd6e295, type: 2}
+  expectedSpeed: 10
   extraTime: 5
   tipPercent: 0.3
   latePenalty: 0.3
@@ -1155,7 +1160,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aaa82e6ea0622f849900d74e724fb0ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TaxiController
-  acceleration: 12
+  acceleration: 8.5
   reverseAcceleration: 6
   maxSpeed: 25
   brakeForce: 20
