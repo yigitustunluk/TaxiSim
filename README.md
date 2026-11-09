@@ -29,6 +29,7 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 | A / D | Steer |
 | Space | Brake |
 | H | Horn |
+| R | Put the taxi back on the nearest road |
 | T (hold) | Speed up time ×20 |
 | ESC / P | Pause menu |
 

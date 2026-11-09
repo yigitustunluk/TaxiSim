@@ -139,6 +139,12 @@ public class CityGenerator : MonoBehaviour
         CreateBox("Asfalt", new Vector3((minX + maxX) / 2f, -0.5f, (minZ + maxZ) / 2f),
                   new Vector3(maxX - minX, 1f, maxZ - minZ), asphalt);
 
+        // Asfaltın kenarlarına görünmez duvarlar: taksi şehirden dışarı düşemesin
+        CreateInvisibleWall(new Vector3((minX + maxX) / 2f, 5f, minZ - 1f), new Vector3(maxX - minX + 4f, 10f, 2f));
+        CreateInvisibleWall(new Vector3((minX + maxX) / 2f, 5f, maxZ + 1f), new Vector3(maxX - minX + 4f, 10f, 2f));
+        CreateInvisibleWall(new Vector3(minX - 1f, 5f, (minZ + maxZ) / 2f), new Vector3(2f, 10f, maxZ - minZ + 4f));
+        CreateInvisibleWall(new Vector3(maxX + 1f, 5f, (minZ + maxZ) / 2f), new Vector3(2f, 10f, maxZ - minZ + 4f));
+
         // 1) Kapatılmış yolları bul: plana göre yol olması gereken ama ağda olmayan yerler.
         //    Yerlerine meydan koyacağız. Bitişik bloklar da daha sık park olacak.
         HashSet<Vector2Int> nearClosed = new HashSet<Vector2Int>();
@@ -324,6 +330,16 @@ public class CityGenerator : MonoBehaviour
                 CreateLine(c, rot, new Vector3(0.15f, 0.02f, dash), lineWhiteMat);
             }
         }
+    }
+
+    // Sadece çarpışması olan, görüntüsü olmayan bir kutu
+    void CreateInvisibleWall(Vector3 center, Vector3 size)
+    {
+        GameObject wall = new GameObject("GorunmezDuvar");
+        wall.transform.SetParent(transform);
+        wall.transform.position = center;
+        BoxCollider col = wall.AddComponent<BoxCollider>();
+        col.size = size;
     }
 
     void CreateLine(Vector3 center, Quaternion rot, Vector3 size, Material mat)

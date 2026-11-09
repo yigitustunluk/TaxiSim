@@ -29,6 +29,7 @@ public class PauseMenu : MonoBehaviour
                 "A / D  —  Direksiyon\n" +
                 "Space  —  Fren\n" +
                 "H  —  Korna\n" +
+                "R  —  Taksiyi yola geri al\n" +
                 "T (basılı tut)  —  Zamanı hızlandır\n" +
                 "ESC  —  Duraklat / Devam";
         }

@@ -836,6 +836,8 @@ MonoBehaviour:
   baseFare: 15
   farePerMeter: 0.2
   farePerWaitSecond: 0.5
+  minPickupDistance: 120
+  minTripDistance: 80
   passengerTypes:
   - {fileID: 11400000, guid: 43d58e4c09a0ee14eb0ead368c5fb663, type: 2}
   - {fileID: 11400000, guid: 4ee925e45e62cf14ebffaa5af282e230, type: 2}
@@ -881,7 +883,7 @@ MonoBehaviour:
   carPrefab: {fileID: 8717126181362990062, guid: cdeeee496447c594ca01c69b8b23a00b, type: 3}
   layout: {fileID: 157382673}
   lights: {fileID: 157382672}
-  carCount: 14
+  carCount: 22
 --- !u!114 &390591188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1225,6 +1227,7 @@ GameObject:
   - component: {fileID: 538237886}
   - component: {fileID: 538237887}
   - component: {fileID: 538237888}
+  - component: {fileID: 538237889}
   m_Layer: 0
   m_Name: Taxi
   m_TagString: Untagged
@@ -1489,6 +1492,22 @@ MonoBehaviour:
   lampColor: {r: 1, g: 0.08, b: 0.05, a: 1}
   idleGlow: 0.6
   brakeGlow: 3
+--- !u!114 &538237889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 538237877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ad978af75e38f242b646b05815f9645, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TaxiRecovery
+  layout: {fileID: 157382673}
+  passengers: {fileID: 390591184}
+  fallHeight: -5
+  cooldown: 2
 --- !u!1 &556779825
 GameObject:
   m_ObjectHideFlags: 0

@@ -20,7 +20,9 @@ public class PassengerManager : MonoBehaviour
     public float maxStopSpeedKmh = 5f;     // Bu hızın altındaysan "durmuş" sayılırsın
     public float baseFare = 15f;           // Açılış ücreti (TL)
     public float farePerMeter = 0.2f;      // Metre başına ücret (TL)
-    public float farePerWaitSecond = 0.5f; // Dururken (trafikte beklerken) saniye başına ücret (TL)
+    public float farePerWaitSecond = 0.5f;
+    public float minPickupDistance = 120f; // Yeni yolcu taksiden en az bu kadar uzakta çıkar (m)
+    public float minTripDistance = 80f;    // Varış noktası biniş noktasından en az bu kadar uzakta (m) // Dururken (trafikte beklerken) saniye başına ücret (TL)
 
     [Header("Yolcu Tipleri")]
     public PassengerType[] passengerTypes;   // Boş bırakılırsa herkes normal yolcu olur
@@ -136,7 +138,7 @@ public class PassengerManager : MonoBehaviour
     {
         state = State.GoingToPickup;
         currentType = ChooseType();
-        targetPos = RandomRoadPoint(taxi.transform.position, 60f, out pickupRoadPoint);
+        targetPos = RandomRoadPoint(taxi.transform.position, minPickupDistance, out pickupRoadPoint);
         PlaceMarker(targetPos, Color.green);
     }
 
@@ -144,7 +146,7 @@ public class PassengerManager : MonoBehaviour
     {
         Vector3 pickupPos = targetPos;
         state = State.CarryingPassenger;
-        targetPos = RandomRoadPoint(pickupPos, 80f, out targetRoadPoint);
+        targetPos = RandomRoadPoint(pickupPos, minTripDistance, out targetRoadPoint);
 
         // Taksimetreyi sıfırla: açılış ücretiyle başlar
         meterDistance = 0f;
@@ -340,7 +342,7 @@ public class PassengerManager : MonoBehaviour
         beam.GetComponent<Renderer>().sharedMaterial = m;
     }
 
-    void ShowMessage(string text)
+    public void ShowMessage(string text)
     {
         message = text;
         messageTimer = 3f;
