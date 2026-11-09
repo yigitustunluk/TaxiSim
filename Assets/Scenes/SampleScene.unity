@@ -1333,7 +1333,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EngineSound
   taxi: {fileID: 0}
-  engineClip: {fileID: 8300000, guid: 29716b1550e08c64ab6d233891e5b24f, type: 3}
+  engineClip: {fileID: 8300000, guid: 550273606e411e749a5d032f22f26a03, type: 3}
   minPitch: 0.8
   maxPitch: 1.9
   idleRpm: 850
