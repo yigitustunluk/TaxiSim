@@ -70,6 +70,8 @@ public class PassengerManager : MonoBehaviour
     public float TimeLeft => timeLeft;
     public float Satisfaction => satisfaction;
     public PassengerType CurrentType => currentType;
+    // Şu anki hedefin yol ağındaki yeri (mini haritadaki GPS rotası için)
+    public RoadPoint TargetRoadPoint => state == State.CarryingPassenger ? targetRoadPoint : pickupRoadPoint;
     public float SpeedLimitKmh => currentType != null ? currentType.speedLimitKmh : 0f;
     public bool IsOverSpeedLimit => IsCarryingPassenger && SpeedLimitKmh > 0f && taxi.SpeedKmh > SpeedLimitKmh;
     public float TotalMoney => SaveData.Money;   // Garajda harcanınca da güncel kalsın

@@ -131,7 +131,9 @@ public class RoadNetwork
     //
     // prev[]: her kavşağa en kısa yoldan hangi kavşaktan gelindiği. Rotayı geriye doğru izlemek için.
     // (Büyük ağlarda 2. adım için "öncelik kuyruğu" kullanılır. 81 kavşakta basit döngü yeterli.)
-    public void Dijkstra(RoadNode source, out float[] dist, out RoadNode[] prev)
+    // excludeFromSource: Başlangıç kavşağından çıkarken kullanılmayacak yol.
+    // Aracın az önce geldiği yolu verirsek, rota kavşakta geldiği yola geri dönemez.
+    public void Dijkstra(RoadNode source, out float[] dist, out RoadNode[] prev, RoadEdge excludeFromSource = null)
     {
         int n = nodes.Count;
         dist = new float[n];
@@ -153,6 +155,7 @@ public class RoadNetwork
             // 3. adım: komşuları güncelle
             foreach (RoadEdge e in nodes[u].edges)
             {
+                if (u == source.id && e == excludeFromSource) continue;   // Geldiğimiz yola geri dönme
                 RoadNode v = e.Other(nodes[u]);
                 float candidate = dist[u] + e.Length;
                 if (candidate < dist[v.id])
@@ -166,24 +169,52 @@ public class RoadNetwork
 
     // Yol üzerindeki iki nokta arasındaki en kısa rota.
     // Başlangıç noktasından yolun iki ucundan birine, oradan Dijkstra ile hedef yolun
-    // uçlarından birine, oradan hedefe gidilir. Dört kombinasyonun en kısası seçilir.
-    public Route FindRoute(RoadPoint from, RoadPoint to)
+    // uçlarından birine, oradan hedefe gidilir. Kombinasyonların en kısası seçilir.
+    //
+    // "heading" (isteğe bağlı): Aracın baktığı yön. Verilirse araç sadece ÖNÜNDEKİ uca
+    // gidebilir, yani rota yolun ortasında geri dönüş (U dönüşü) yaptırmaz.
+    // Navigasyon uygulamaları da böyle çalışır: önce bir sonraki kavşağa gidip oradan döndürür.
+    public Route FindRoute(RoadPoint from, RoadPoint to, Vector3? heading = null)
     {
-        if (from.edge == to.edge)
-            return new Route { length = Mathf.Abs(from.t - to.t) * from.edge.Length };
-
-        Route best = null;
         RoadNode[] starts = { from.edge.a, from.edge.b };
         float[] startCosts = { from.t * from.edge.Length, (1f - from.t) * from.edge.Length };
+        bool[] allowed = { true, true };
+
+        if (heading.HasValue)
+        {
+            // Yolun a→b yönü aracın baktığı yönle aynıysa önümüzdeki uç b'dir
+            bool facingB = Vector3.Dot(from.edge.b.position - from.edge.a.position, heading.Value) >= 0f;
+            allowed[0] = !facingB;
+            allowed[1] = facingB;
+        }
+
+        // Aynı yoldaysak ve hedef önümüzdeyse doğrudan git
+        if (from.edge == to.edge)
+        {
+            bool targetAhead = !heading.HasValue || (allowed[1] ? to.t >= from.t : to.t <= from.t);
+            if (targetAhead)
+                return new Route { length = Mathf.Abs(from.t - to.t) * from.edge.Length };
+        }
+
+        Route best = null;
         RoadNode[] ends = { to.edge.a, to.edge.b };
         float[] endCosts = { to.t * to.edge.Length, (1f - to.t) * to.edge.Length };
 
         for (int s = 0; s < 2; s++)
         {
-            Dijkstra(starts[s], out float[] dist, out RoadNode[] prev);
+            if (!allowed[s]) continue;
+
+            // Yön biliniyorsa: önümüzdeki kavşağa vardıktan sonra aynı yoldan geri dönmek de yasak.
+            // (İlk denemede rota kavşağa gidip aynı yoldan geri geliyordu, yani yine U dönüşüydü.)
+            RoadEdge noUTurn = heading.HasValue ? from.edge : null;
+            Dijkstra(starts[s], out float[] dist, out RoadNode[] prev, noUTurn);
+
             for (int g = 0; g < 2; g++)
             {
                 if (dist[ends[g].id] == float.MaxValue) continue;
+                // Hedef aynı yolda ve arkamızdaysa: önümüzdeki kavşaktan aynı yola geri girmek
+                // yine U dönüşü olur. Hedefe yolun öbür ucundan, bloğu dolaşarak gelmeliyiz.
+                if (noUTurn != null && to.edge == from.edge && ends[g] == starts[s]) continue;
                 float total = startCosts[s] + dist[ends[g].id] + endCosts[g];
                 if (best == null || total < best.length)
                     best = new Route { length = total, nodes = TracePath(prev, starts[s], ends[g]) };
@@ -200,6 +231,24 @@ public class RoadNetwork
             path.Add(n);
         path.Reverse();
         return path;
+    }
+
+    // Dünyadaki bir noktaya en yakın yol üzerindeki nokta.
+    // Her yol için noktayı yolun çizgisine "izdüşürür" (dik iner) ve en yakını seçer.
+    public RoadPoint NearestPoint(Vector3 pos)
+    {
+        RoadPoint best = new RoadPoint();
+        float bestDist = float.MaxValue;
+        foreach (RoadEdge e in edges)
+        {
+            Vector3 ab = e.b.position - e.a.position;
+            // t: noktanın yol boyunca nerede olduğu (0 = a ucu, 1 = b ucu)
+            float t = Mathf.Clamp01(Vector3.Dot(pos - e.a.position, ab) / ab.sqrMagnitude);
+            Vector3 onRoad = e.a.position + ab * t;
+            float d = (new Vector3(pos.x, 0f, pos.z) - new Vector3(onRoad.x, 0f, onRoad.z)).sqrMagnitude;
+            if (d < bestDist) { bestDist = d; best.edge = e; best.t = t; }
+        }
+        return best;
     }
 
     // Dünyadaki bir noktaya en yakın kavşak

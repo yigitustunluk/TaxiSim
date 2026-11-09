@@ -40,6 +40,11 @@ public class CityGenerator : MonoBehaviour
     [HideInInspector] public Material lampHeadMaterial;     // Lamba başlığının parlayan malzemesi
     [HideInInspector] public List<Material> buildingMaterials = new List<Material>(); // Gece pencereleri yakmak için
 
+    // Mini harita için: blokların, parkların ve meydanların yerleri
+    [HideInInspector] public List<Rect> blockRects = new List<Rect>();
+    [HideInInspector] public List<Rect> parkRects = new List<Rect>();
+    [HideInInspector] public List<Rect> plazaRects = new List<Rect>();
+
     Texture2D windowTexture;     // Duvar + pencere camı deseni (gündüz görünen)
     Texture2D windowLightMap;    // Hangi pencerelerin ışığı yanıyor (gece parlayan)
 
@@ -176,7 +181,8 @@ public class CityGenerator : MonoBehaviour
                 bool touchesMain = layout.xMain[i] || layout.xMain[i + 1] || layout.zMain[j] || layout.zMain[j + 1];
                 float parkChance = nearClosed.Contains(new Vector2Int(i, j)) ? 0.35f : parkRatio;
 
-                if (Random.value < parkChance) CreatePark(r);
+                blockRects.Add(r);
+                if (Random.value < parkChance) { CreatePark(r); parkRects.Add(r); }
                 else CreateBuildings(r, touchesMain);
 
                 CreateLamp(new Vector3(r.xMin + 1f, 0.2f, r.yMin + 1f), poleMat);
@@ -257,6 +263,7 @@ public class CityGenerator : MonoBehaviour
     // Meydan: kapatılmış yolun yeri. Kaldırımla kaplı, birkaç ağaç.
     void CreatePlaza(Rect r)
     {
+        plazaRects.Add(r);
         GameObject plaza = CreateBox("Meydan", new Vector3(r.center.x, 0.1f, r.center.y),
                                      new Vector3(r.width, 0.2f, r.height), sidewalkMat);
         plaza.AddComponent<Sidewalk>();
