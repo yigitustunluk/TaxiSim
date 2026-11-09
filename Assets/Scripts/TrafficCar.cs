@@ -44,6 +44,16 @@ public class TrafficCar : MonoBehaviour
     bool committedToCross;
     System.Random rng = new System.Random();
 
+    // KAVŞAKTA DÖNÜŞ EĞRİSİ (Bézier eğrisi)
+    // Üç noktayla tanımlanan yumuşak bir eğri: başlangıç (p0), bitiş (p2) ve eğriyi kendine
+    // doğru "çeken" bir kontrol noktası (p1). p1'i iki şeridin kesiştiği köşeye koyunca
+    // araç köşeyi keskin dönmek yerine yay çizerek döner.
+    bool onCurve;
+    Vector3 curveP0, curveP1, curveP2;
+    float curveT;          // Eğrinin neresindeyiz (0 = başı, 1 = sonu)
+    float curveLength;
+    bool curveIsTurn;      // Dönüş mü, yoksa kavşaktan düz geçiş mi
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -64,6 +74,8 @@ public class TrafficCar : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (onCurve) { FollowCurve(); return; }
+
         Vector3 target = waypoints[waypointIndex];
         Vector3 toTarget = target - rb.position;
         toTarget.y = 0f;
@@ -160,11 +172,89 @@ public class TrafficCar : MonoBehaviour
         }
         else
         {
+            Vector3 oldDirection = direction;
+            Vector3 start = rb.position;
+
             currentNode = nextNode;     // Parçanın sonuna, yani kavşağa geldik
             ChooseNextEdge();           // Yeni yol seç
             PlanSegment();
-            waypointIndex = 0;          // Yeni parçanın başına git (kavşakta dönüş)
+
+            // Kavşağın içini bir eğriyle geç, sonra yeni yolun sonuna doğru devam et
+            StartCurve(start, oldDirection, waypoints[0], direction);
+            waypointIndex = 1;
         }
+    }
+
+    void StartCurve(Vector3 start, Vector3 oldDir, Vector3 end, Vector3 newDir)
+    {
+        curveP0 = new Vector3(start.x, 0f, start.z);
+        curveP2 = new Vector3(end.x, 0f, end.z);
+
+        if (Vector3.Dot(oldDir, newDir) < -0.5f)
+        {
+            // Geri dönüş (çıkmaz sokak): ileri doğru bir yay çiz
+            curveP1 = (curveP0 + curveP2) / 2f + oldDir * 6f;
+        }
+        else if (Vector3.Dot(oldDir, newDir) > 0.9f)
+        {
+            // Düz geçiş: kontrol noktası tam ortada, eğri düz bir çizgi olur
+            curveP1 = (curveP0 + curveP2) / 2f;
+        }
+        else
+        {
+            // Sağa/sola dönüş: eski şerit çizgisi ile yeni şerit çizgisinin kesiştiği köşe
+            curveP1 = curveP0 + oldDir * Vector3.Dot(curveP2 - curveP0, oldDir);
+        }
+
+        // Eğrinin uzunluğu için yaklaşık hesap: doğrudan mesafe ile köşeden geçen yolun ortalaması
+        curveLength = (Vector3.Distance(curveP0, curveP2) +
+                       Vector3.Distance(curveP0, curveP1) + Vector3.Distance(curveP1, curveP2)) / 2f;
+        curveLength = Mathf.Max(curveLength, 0.1f);
+        curveT = 0f;
+        onCurve = true;
+        curveIsTurn = Vector3.Dot(oldDir, newDir) < 0.9f;
+    }
+
+    void FollowCurve()
+    {
+        Vector3 tangent = BezierTangent(curveT);
+        if (tangent.sqrMagnitude < 0.0001f) tangent = transform.forward;
+        tangent.Normalize();
+
+        // Eğrideyken de önümüzdeki araçlara dikkat et
+        bool blocked = IsPathBlocked(tangent);
+        if (waitTimer > 0f)
+        {
+            waitTimer -= Time.fixedDeltaTime;
+            blocked = true;
+            currentSpeed = 0f;
+        }
+        // Dönüşte biraz yavaşla (gerçek sürücüler de öyle yapar), düz geçişte yavaşlama
+        float desiredSpeed = blocked ? 0f : speed * (curveIsTurn ? 0.7f : 1f);
+        currentSpeed = Mathf.MoveTowards(currentSpeed, desiredSpeed, acceleration * Time.fixedDeltaTime);
+
+        // t'yi eşit adımlarla artırmak eşit mesafe demek DEĞİL: Bézier eğrisinde bazı yerlerde
+        // t yavaş, bazı yerlerde hızlı ilerler. Eğrinin o noktadaki "hızına" (türevin uzunluğu)
+        // bölerek adım atıyoruz, böylece araç eğri boyunca sabit hızla gider.
+        float curveSpeed = Mathf.Max(BezierTangent(curveT).magnitude, 0.5f);
+        curveT = Mathf.Min(1f, curveT + currentSpeed * Time.fixedDeltaTime / curveSpeed);
+        rb.MovePosition(Bezier(curveT));
+        rb.MoveRotation(Quaternion.LookRotation(BezierTangent(curveT).sqrMagnitude > 0.0001f ? BezierTangent(curveT) : tangent));
+
+        if (curveT >= 1f) onCurve = false;   // Eğri bitti, yeni yolda düz devam
+    }
+
+    // İkinci derece Bézier eğrisi: t, 0'dan 1'e giderken p0'dan p2'ye, p1'e doğru bükülerek gider
+    Vector3 Bezier(float t)
+    {
+        float u = 1f - t;
+        return u * u * curveP0 + 2f * u * t * curveP1 + t * t * curveP2;
+    }
+
+    // Eğrinin o noktadaki yönü (türevi): aracın burnu bu yöne bakar
+    Vector3 BezierTangent(float t)
+    {
+        return 2f * (1f - t) * (curveP1 - curveP0) + 2f * t * (curveP2 - curveP1);
     }
 
     // Bulunduğumuz kavşaktan çıkan yollardan birini rastgele seçer
