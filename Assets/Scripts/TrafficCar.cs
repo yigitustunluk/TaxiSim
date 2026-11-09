@@ -39,6 +39,9 @@ public class TrafficCar : MonoBehaviour
     int waypointIndex;
 
     float currentSpeed;
+    // Bu kavşağı geçmeye karar verildi mi? Çizgiye yakınken yeşil/sarı görüp "geçiyorum"
+    // dediysek, ışık sonradan kırmızıya dönse de durmayız (çizginin ortasında kalmamak için).
+    bool committedToCross;
     System.Random rng = new System.Random();
 
     void Start()
@@ -87,11 +90,14 @@ public class TrafficCar : MonoBehaviour
         // TRAFİK IŞIĞI: Kavşağa yaklaşıyorsak (yol parçasının sonuna gidiyorsak) ışığa bak.
         // waypoints[1], kavşağın tam kenarında, yani "dur çizgisinde".
         bool mustStop = false;
-        if (lights != null && lights.isActiveAndEnabled && waypointIndex == 1)
+        if (lights != null && lights.isActiveAndEnabled && waypointIndex == 1 && !committedToCross)
         {
             SignalColor signal = lights.GetSignal(nextNode, direction);
             // Sarıda: çizgiye çok yakınsak geç (aniden duramayız), uzaksak dur
             mustStop = signal == SignalColor.Red || (signal == SignalColor.Yellow && distance > stopMargin + 4f);
+
+            // Durmamız gerekmiyor ve çizgiye yakınız: geçme kararı verildi, artık geri dönüş yok
+            if (!mustStop && distance <= stopMargin + 4f) committedToCross = true;
 
             if (mustStop)
             {
@@ -179,6 +185,7 @@ public class TrafficCar : MonoBehaviour
     // Noktalar kavşağın dışında: kavşağın bu yöndeki yarı genişliği kadar içeride.
     void PlanSegment()
     {
+        committedToCross = false;   // Yeni yol, yeni kavşak: karar sıfırlanır
         Vector3 right = Vector3.Cross(Vector3.up, direction);       // Gidiş yönüne göre sağ
         Vector3 laneOffset = right * (currentEdge.width / 4f);      // Sağ yarının ortası
 
