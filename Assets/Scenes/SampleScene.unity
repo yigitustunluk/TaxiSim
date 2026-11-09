@@ -806,7 +806,6 @@ GameObject:
   m_Component:
   - component: {fileID: 390591185}
   - component: {fileID: 390591184}
-  - component: {fileID: 390591186}
   - component: {fileID: 390591187}
   - component: {fileID: 390591188}
   m_Layer: 0
@@ -867,22 +866,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &390591186
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 390591183}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 27a08940e4d1fbd4f80e60023389bb6c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NavigationArrow
-  taxi: {fileID: 538237883}
-  passengers: {fileID: 390591184}
-  height: 2.6
-  turnSmooth: 8
 --- !u!114 &390591187
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -928,6 +911,9 @@ MonoBehaviour:
   taxiColor: {r: 0.9490196, g: 0.7607843, b: 0, a: 1}
   pickupColor: {r: 0.3, g: 1, b: 0.3, a: 1}
   dropoffColor: {r: 1, g: 0.55, b: 0, a: 1}
+  showRoute: 1
+  routeWidth: 5
+  routeUpdateInterval: 0.25
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
