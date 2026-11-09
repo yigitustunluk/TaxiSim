@@ -808,6 +808,7 @@ GameObject:
   - component: {fileID: 390591184}
   - component: {fileID: 390591187}
   - component: {fileID: 390591188}
+  - component: {fileID: 390591189}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -852,6 +853,7 @@ MonoBehaviour:
   speedTolerance: 5
   speedGraceTime: 1
   redLightPenalty: 30
+  pedestrianPenalty: 50
   sidewalkPenalty: 25
 --- !u!4 &390591185
 Transform:
@@ -916,6 +918,39 @@ MonoBehaviour:
   showRoute: 1
   routeWidth: 5
   routeUpdateInterval: 0.25
+--- !u!114 &390591189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 390591183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57c0370c3153b6c46992c4ac933cc5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PedestrianSpawner
+  city: {fileID: 157382670}
+  characterModels:
+  - {fileID: 919132149155446097, guid: 5aa4e49e7e6870b4ea6bea9f7370c1c5, type: 3}
+  - {fileID: 919132149155446097, guid: de6d99290e90baf4db9915d8c7a15987, type: 3}
+  - {fileID: 919132149155446097, guid: 90c5ada0257da1e4c9647879466cde4b, type: 3}
+  - {fileID: 919132149155446097, guid: c0fdb8feb2564d942979a670ac0069fa, type: 3}
+  - {fileID: 919132149155446097, guid: 6f3ff8d390da7db409d3a26d4370d1b1, type: 3}
+  - {fileID: 919132149155446097, guid: ca31a3f990936d24e8b39da61266aa64, type: 3}
+  - {fileID: 919132149155446097, guid: 468e5b11daf4d544086fc4e577f1c0c5, type: 3}
+  - {fileID: 919132149155446097, guid: 59fa5d074b89834488a5fe600cc92a18, type: 3}
+  - {fileID: 919132149155446097, guid: 37acccca4fde19f4c9ced294f76ecc66, type: 3}
+  - {fileID: 919132149155446097, guid: aae95e71f31e9774fa7c4fe3247b1885, type: 3}
+  - {fileID: 919132149155446097, guid: b1e72b8a4c0024445b3fad50aab0175f, type: 3}
+  - {fileID: 919132149155446097, guid: 82aa7228dedd76f48aa9fd31fb8d7589, type: 3}
+  - {fileID: 919132149155446097, guid: 42dd903eafdd88e4996eb6a0c1d754c6, type: 3}
+  - {fileID: 919132149155446097, guid: 5104b91837046db4d81ab680169be2a6, type: 3}
+  animatorController: {fileID: 9100000, guid: 0c16f46f490098f43af24c57bbdeeda9, type: 2}
+  count: 60
+  modelScale: 2
+  sidewalkInset: 1.6
+  sidewalkHeight: 0.2
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1339,7 +1374,7 @@ MonoBehaviour:
   idleRpm: 850
   maxRpm: 3500
   gearCount: 4
-  volume: 0.2
+  volume: 0
   hornVolume: 0.25
 --- !u!82 &538237885
 AudioSource:

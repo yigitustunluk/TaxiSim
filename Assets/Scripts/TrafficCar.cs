@@ -44,6 +44,16 @@ public class TrafficCar : MonoBehaviour
     bool committedToCross;
     System.Random rng = new System.Random();
 
+    // KAVŞAK REZERVASYONU (kilit / mutex): Bir kavşağın içinde aynı anda tek araç olabilir.
+    // Kavşak doluysa gelen araç dur çizgisinde bekler. Bu, araçların kavşağın ortasında
+    // birbirini bekleyip sonsuza kadar kilitlenmesini (deadlock) önler.
+    // "static": bütün araçlar aynı tabloyu paylaşır.
+    static Dictionary<RoadNode, TrafficCar> intersectionOwner = new Dictionary<RoadNode, TrafficCar>();
+    RoadNode reservedNode;
+
+    // YEDEK EMNİYET: Başka bir araç yüzünden uzun süre takılırsak kısa süre diğer araçları yok say
+    float stuckTimer, ghostTimer;
+
     // KAVŞAKTA DÖNÜŞ EĞRİSİ (Bézier eğrisi)
     // Üç noktayla tanımlanan yumuşak bir eğri: başlangıç (p0), bitiş (p2) ve eğriyi kendine
     // doğru "çeken" bir kontrol noktası (p1). p1'i iki şeridin kesiştiği köşeye koyunca
@@ -99,6 +109,9 @@ public class TrafficCar : MonoBehaviour
         // Hızı yumuşakça hedef hıza yaklaştır (engel varsa 0'a)
         float desiredSpeed = blocked ? 0f : speed;
 
+        // KAVŞAK DOLU MU? Kavşağa yaklaşırken içinde başka araç varsa çizgide bekle
+        bool mustYield = waypointIndex == 1 && distance < stopMargin + 6f && IsIntersectionBusy(nextNode);
+
         // TRAFİK IŞIĞI: Kavşağa yaklaşıyorsak (yol parçasının sonuna gidiyorsak) ışığa bak.
         // waypoints[1], kavşağın tam kenarında, yani "dur çizgisinde".
         bool mustStop = false;
@@ -119,6 +132,13 @@ public class TrafficCar : MonoBehaviour
             }
         }
 
+        if (mustYield)
+        {
+            // Kavşağın kenarında, kısa bir mesafede dur (ışıktaki kadar geride değil)
+            float slowDown = Mathf.Clamp01((distance - 1.5f) / 6f);
+            desiredSpeed = Mathf.Min(desiredSpeed, speed * slowDown);
+        }
+
         currentSpeed = Mathf.MoveTowards(currentSpeed, desiredSpeed, acceleration * Time.fixedDeltaTime);
 
         if (distance > 0.01f)
@@ -129,12 +149,14 @@ public class TrafficCar : MonoBehaviour
 
             // Hedefe doğru ilerle (hedefi geçmeyecek kadar).
             // Kırmızıda dur çizgisini asla geçme.
-            float maxStep = mustStop ? Mathf.Max(0f, distance - stopMargin) : distance;
+            float maxStep = mustStop ? Mathf.Max(0f, distance - stopMargin)
+                          : mustYield ? Mathf.Max(0f, distance - 1.5f)
+                          : distance;
             float step = Mathf.Min(currentSpeed * Time.fixedDeltaTime, maxStep);
             rb.MovePosition(rb.position + toTarget.normalized * step);
         }
 
-        if (distance < 0.5f && !mustStop) AdvanceWaypoint();
+        if (distance < 0.5f && !mustStop && !mustYield) AdvanceWaypoint();
     }
 
     // Önümüzdeki yolu araç genişliğinde bir kutuyla tarar.
@@ -145,15 +167,26 @@ public class TrafficCar : MonoBehaviour
         Vector3 halfSize = new Vector3(1.1f, 0.5f, 0.5f);   // Aracın yarı genişliği, yarı yüksekliği
         Quaternion orientation = Quaternion.LookRotation(moveDirection);
 
+        if (ghostTimer > 0f) ghostTimer -= Time.fixedDeltaTime;
+
         RaycastHit[] hits = Physics.BoxCastAll(origin, halfSize, moveDirection, orientation,
                                                brakeDistance + 2f, ~0, QueryTriggerInteraction.Ignore);
+        bool blockedByTraffic = false;
         foreach (RaycastHit h in hits)
         {
             if (h.rigidbody == null) continue;   // Araç değil
             if (h.rigidbody == rb) continue;     // Kendimiz
-            return true;
+
+            bool isTraffic = h.rigidbody.GetComponent<TrafficCar>() != null;
+            if (!isTraffic) return true;          // Taksi: her zaman dur, asla yok sayma
+            if (ghostTimer > 0f) continue;        // Kurtulma modu: diğer trafik araçlarını yok say
+            blockedByTraffic = true;
         }
-        return false;
+
+        // Trafik aracı yüzünden 8 saniyeden uzun takıldıysak 2 saniye kurtulma moduna geç
+        stuckTimer = blockedByTraffic ? stuckTimer + Time.fixedDeltaTime : 0f;
+        if (stuckTimer > 8f) { ghostTimer = 2f; stuckTimer = 0f; }
+        return blockedByTraffic;
     }
 
     // Bir araçla temas ettiğimiz sürece dur. Kinematik araç kimseden etkilenmez,
@@ -179,7 +212,8 @@ public class TrafficCar : MonoBehaviour
             ChooseNextEdge();           // Yeni yol seç
             PlanSegment();
 
-            // Kavşağın içini bir eğriyle geç, sonra yeni yolun sonuna doğru devam et
+            // Kavşağı rezerve et, içini bir eğriyle geç, sonra yeni yolun sonuna doğru devam et
+            Reserve(currentNode);
             StartCurve(start, oldDirection, waypoints[0], direction);
             waypointIndex = 1;
         }
@@ -241,7 +275,36 @@ public class TrafficCar : MonoBehaviour
         rb.MovePosition(Bezier(curveT));
         rb.MoveRotation(Quaternion.LookRotation(BezierTangent(curveT).sqrMagnitude > 0.0001f ? BezierTangent(curveT) : tangent));
 
-        if (curveT >= 1f) onCurve = false;   // Eğri bitti, yeni yolda düz devam
+        if (curveT >= 1f)
+        {
+            onCurve = false;   // Eğri bitti, yeni yolda düz devam
+            Release();         // Kavşaktan çıktık, başkası girebilir
+        }
+    }
+
+    bool IsIntersectionBusy(RoadNode node)
+    {
+        return intersectionOwner.TryGetValue(node, out TrafficCar owner)
+               && owner != null && owner != this;
+    }
+
+    void Reserve(RoadNode node)
+    {
+        intersectionOwner[node] = this;
+        reservedNode = node;
+    }
+
+    void Release()
+    {
+        if (reservedNode != null && intersectionOwner.TryGetValue(reservedNode, out TrafficCar owner) && owner == this)
+            intersectionOwner.Remove(reservedNode);
+        reservedNode = null;
+    }
+
+    // Araç yok olursa (ör. sahne kapanınca) rezervasyonu bırak, yoksa kavşak sonsuza kadar dolu kalır
+    void OnDestroy()
+    {
+        Release();
     }
 
     // İkinci derece Bézier eğrisi: t, 0'dan 1'e giderken p0'dan p2'ye, p1'e doğru bükülerek gider

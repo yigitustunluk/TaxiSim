@@ -36,7 +36,8 @@ public class PassengerManager : MonoBehaviour
     public float crashPenalty = 15f;       // Her çarpışmada memnuniyet kaybı (puan)
     public float speedTolerance = 5f;      // Hız sınırını bu kadar (km/s) aşmak tolere edilir
     public float speedGraceTime = 1f;      // Sınırı bu kadar saniye aşınca ceza başlar
-    public float redLightPenalty = 30f;    // Kırmızıda geçince memnuniyet kaybı (puan)
+    public float redLightPenalty = 30f;
+    public float pedestrianPenalty = 50f;  // Yayaya çarpınca memnuniyet kaybı (puan)    // Kırmızıda geçince memnuniyet kaybı (puan)
     public float sidewalkPenalty = 25f;    // Kaldırımda geçen her saniye memnuniyet kaybı (puan)
 
     // Oyuncu şu an ne yapıyor? Bu tür "durum" listelerine enum denir.
@@ -85,6 +86,7 @@ public class PassengerManager : MonoBehaviour
     {
         taxi.OnCrash += HandleCrash;   // Taksinin çarpışma duyurusuna abone ol
         if (lights != null) lights.OnRedLightRun += HandleRedLight;
+        Pedestrian.OnHitByTaxi += HandlePedestrianHit;   // Statik olay: bütün yayalar için tek abonelik
         totalMoney = SaveData.Money;              // Kayıttan yükle
         completedRides = SaveData.CompletedRides;
         NewPickup();
@@ -94,6 +96,9 @@ public class PassengerManager : MonoBehaviour
     {
         if (taxi != null) taxi.OnCrash -= HandleCrash;  // Aboneliği bırak (iyi alışkanlık)
         if (lights != null) lights.OnRedLightRun -= HandleRedLight;
+        // Statik olaydan çıkmak ZORUNLU: bu script yok olsa da olay yaşamaya devam eder.
+        // Çıkmazsak ana menüye dönüp tekrar oyuna girince olay yok olmuş bir script'i çağırır.
+        Pedestrian.OnHitByTaxi -= HandlePedestrianHit;
     }
 
     void Update()
@@ -254,6 +259,18 @@ public class PassengerManager : MonoBehaviour
         Vector3 p = taxi.transform.position;
         p.y = 0f;
         return p;
+    }
+
+    void HandlePedestrianHit()
+    {
+        if (state != State.CarryingPassenger)
+        {
+            ShowMessage("Bir yayaya çarptın!");
+            return;
+        }
+        float loss = pedestrianPenalty * PenaltyMult;
+        satisfaction = Mathf.Max(0f, satisfaction - loss);
+        ShowMessage("Bir yayaya çarptın! Memnuniyet -" + loss.ToString("0"));
     }
 
     // Oyuncu kırmızıda geçtiğinde TrafficLightSystem tarafından çağrılır

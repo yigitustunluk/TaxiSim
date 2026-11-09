@@ -18,7 +18,8 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 - Arrive on time for a **tip**. Crashes and driving on the sidewalk lower passenger satisfaction, and with it your tip.
 - Arrive late and the passenger disputes the meter: they pay at most the fare of the shortest route, minus 30%. Taking the long way never pays.
 - **Passenger types** change how you need to drive: *Hurried* passengers tip more the earlier you arrive, *Careful* ones have a speed limit and double penalties, and rare *VIP* passengers pay 2.5× but expect a smooth ride.
-- **Traffic lights** at every intersection. Running a red light upsets your passenger; waiting costs time. Your call.
+- **Pedestrians** walk the sidewalks. Drive onto the sidewalk and they run; hit one and your passenger will not be happy.
+- **Traffic lights** at major intersections. Running a red light upsets your passenger; waiting costs time. Your call.
 - Progress is **auto-saved** after every ride in one of **3 save slots**. Spend your earnings in the **Garage** (pause menu) to upgrade the engine, brakes and tyres; upgrades apply instantly.
 
 ## Controls
@@ -40,6 +41,8 @@ A 3D taxi driving game built in **Unity 6 (URP)**. Pick up passengers across a p
 - **Shortest paths with Dijkstra**: trip time and the expected fare use the real shortest route on the road graph, since closed streets make grid distance wrong.
 - **Minimap with GPS route**: a second orthographic camera renders a stylized map (blocks, parks, roads) on its own layer into a Render Texture. The route to the target is recomputed with Dijkstra four times a second and respects the taxi's heading: no U-turns in the middle of a road or straight back at the next intersection. Targets outside the map are pinned to its edge.
 - **Traffic AI**: cars walk the road graph intersection by intersection (never into closed streets), keep to the right lane, brake for obstacles using a `BoxCast` along their *intended* path (so they also see cars while turning), stop at red lights behind the signal pole, and remember a "go" decision once they are too close to stop. Turns follow quadratic Bézier curves through the lane corner, stepped by arc length so cars keep a constant speed along the curve.
+- **Intersection reservation**: only one traffic car may be inside an intersection at a time (a shared lock table), which prevents the cars from deadlocking each other in the middle. A watchdog lets a car ignore other traffic briefly if it is ever stuck for more than 8 seconds.
+- **Pedestrians**: rigged Kenney characters driven by an Animator Controller (walk / idle / sprint / knockdown), walking loops around blocks with random pauses. Walk animation speed scales with movement speed so feet don't slide. They flee from a taxi speeding on the sidewalk and return to their path afterwards; a hit is reported through a static event so the passenger system subscribes once for all pedestrians.
 - **Traffic lights** only at major intersections (decided by the city plan). Signal state is *computed* from time and a per-intersection offset rather than stored, so the lamps, the traffic AI and the red-light check always agree. The player's violations are detected when entering an intersection and raised as an event.
 - **Passenger loop**: state machine (`enum`) for pick-up / drop-off, time limit, tips and satisfaction.
 - **Day/night cycle**: animated sun, flat ambient and fog driven by time of day, headlights and street lamps that switch on at dusk, lit building windows.
@@ -75,6 +78,8 @@ Some problems I ran into and how they were solved:
 | `CityGenerator` | Builds the city from the plan: blocks, buildings, parks, plazas, road markings, lamps |
 | `PassengerManager` | Ride loop, taximeter, timer, tips, penalties |
 | `Minimap` | Minimap rendering, taxi/target icons, GPS route line |
+| `Pedestrian` / `PedestrianSpawner` | Sidewalk pedestrians, fleeing, knockdown |
+| `TaxiRecovery` | R key / auto recovery back onto the nearest road |
 | `TrafficCar` / `TrafficSpawner` | Traffic AI and spawning |
 | `TrafficLightSystem` | Signal timing, signal poles, red-light detection |
 | `GameHUD` | On-screen UI |
